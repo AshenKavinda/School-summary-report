@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialize Summary Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/src/data_structures/d_linked_list.js"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Initialize Summary Report</h1>
+                    <p class="mt-1 text-sm text-gray-500">Set up a new summary report with student marks</p>
+                </div>
+                <button 
+                    onclick="goBack()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span>Back</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Initialization Form -->
+        <div id="initForm" class="bg-white rounded-lg shadow-md p-8 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">Summary Report Details</h2>
+            <form id="summaryForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Year -->
+                    <div>
+                        <label for="year" class="block text-sm font-medium text-gray-700 mb-2">
+                            Year <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="year" 
+                            name="year" 
+                            required
+                            min="2020"
+                            max="2030"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., 2024"
+                        >
+                        <p id="yearError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Class Name <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            name="name" 
+                            required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., Grade 10 A"
+                        >
+                        <p id="nameError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Test Count -->
+                    <div>
+                        <label for="testCount" class="block text-sm font-medium text-gray-700 mb-2">
+                            Test Count <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="testCount" 
+                            name="testCount" 
+                            required
+                            min="1"
+                            max="10"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., 3"
+                        >
+                        <p id="testCountError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+
+                    <!-- Student Count -->
+                    <div>
+                        <label for="studentCount" class="block text-sm font-medium text-gray-700 mb-2">
+                            Student Count <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            id="studentCount" 
+                            name="studentCount" 
+                            required
+                            min="1"
+                            max="100"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., 25"
+                        >
+                        <p id="studentCountError" class="text-red-500 text-sm mt-1 hidden"></p>
+                    </div>
+                </div>
+
+                <!-- Template Selection -->
+                <div>
+                    <label for="template" class="block text-sm font-medium text-gray-700 mb-2">
+                        Subject Template <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        id="template" 
+                        name="template" 
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">Select Template</option>
+                    </select>
+                    <p id="templateError" class="text-red-500 text-sm mt-1 hidden"></p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-4 pt-6 border-t">
+                    <button 
+                        type="button"
+                        onclick="resetForm()"
+                        class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-6 rounded-lg font-medium transition duration-200"
+                    >
+                        Reset
+                    </button>
+                    <button 
+                        type="submit"
+                        id="initializeBtn"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition duration-200"
+                    >
+                        Initialize
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Preview Section -->
+        <div id="previewSection" class="hidden">
+            <!-- Summary Information -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Summary Information</h2>
+                <div id="summaryInfo" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <!-- Summary details will be populated here -->
+                </div>
+            </div>
+
+            <!-- Marks Tables -->
+            <div id="marksTablesContainer">
+                <!-- Tables for each test will be generated here -->
+            </div>
+
+            <!-- Save Button -->
+            <div class="bg-white rounded-lg shadow-md p-6 mt-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">Ready to Save</h3>
+                        <p class="text-sm text-gray-600">Review the data above and click save to store in database</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button 
+                            onclick="editForm()"
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200"
+                        >
+                            Edit
+                        </button>
+                        <button 
+                            onclick="saveToDatabase()"
+                            id="saveBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200"
+                        >
+                            Save to Database
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2" id="loadingTitle">Processing...</h3>
+                <p class="text-gray-500" id="loadingMessage">Please wait...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize linked lists for data management
+        let summaryList;
+        let marksList;
+        let subjectsList;
+        
+        // Current data
+        let currentSummary = null;
+        let currentMarks = [];
+        let selectedTemplate = null;
+
+        // Initialize linked lists
+        function initializeLinkedLists() {
+            if (typeof DLinkedList !== 'undefined') {
+                summaryList = new DLinkedList();
+                marksList = new DLinkedList();
+                subjectsList = new DLinkedList();
+            } else {
+                console.warn('DLinkedList not found, using array fallback');
+                // Fallback implementations
+                summaryList = createFallbackList();
+                marksList = createFallbackList();
+                subjectsList = createFallbackList();
+            }
+        }
+
+        function createFallbackList() {
+            return {
+                items: [],
+                add: function(item) { this.items.push(item); return true; },
+                remove: function(item) { 
+                    const index = this.items.indexOf(item);
+                    if (index > -1) { this.items.splice(index, 1); return true; }
+                    return false;
+                },
+                toArray: function() { return [...this.items]; },
+                getSize: function() { return this.items.length; },
+                clear: function() { this.items = []; }
+            };
+        }
+
+        // DOM elements
+        const initForm = document.getElementById('initForm');
+        const summaryForm = document.getElementById('summaryForm');
+        const previewSection = document.getElementById('previewSection');
+        const loadingModal = document.getElementById('loadingModal');
+        const loadingTitle = document.getElementById('loadingTitle');
+        const loadingMessage = document.getElementById('loadingMessage');
+
+        // Form inputs
+        const yearInput = document.getElementById('year');
+        const nameInput = document.getElementById('name');
+        const testCountInput = document.getElementById('testCount');
+        const studentCountInput = document.getElementById('studentCount');
+        const templateSelect = document.getElementById('template');
+
+        // Event listeners
+        summaryForm.addEventListener('submit', handleInitialize);
+        
+        // Load templates on page load
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                const data = await response.json();
+                
+                if (data.success) {
+                    populateTemplateDropdown(data.templates);
+                } else {
+                    showNotification('Failed to load templates', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+                showNotification('Network error loading templates', 'error');
+            }
+        }
+
+        // Populate template dropdown
+        function populateTemplateDropdown(templates) {
+            // Clear existing options except the first one
+            while (templateSelect.children.length > 1) {
+                templateSelect.removeChild(templateSelect.lastChild);
+            }
+
+            templates.forEach(template => {
+                const option = document.createElement('option');
+                option.value = template.template_id;
+                option.textContent = `${template.name} (${template.subjects.length} subjects)`;
+                option.dataset.subjects = JSON.stringify(template.subjects);
+                templateSelect.appendChild(option);
+            });
+        }
+
+        // Handle form submission
+        async function handleInitialize(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                return;
+            }
+
+            showLoadingModal('Generating Data', 'Creating summary and marks structure...');
+
+            try {
+                // Get form data
+                const formData = getFormData();
+                
+                // Get selected template
+                const templateOption = templateSelect.selectedOptions[0];
+                selectedTemplate = {
+                    id: templateOption.value,
+                    name: templateOption.textContent,
+                    subjects: JSON.parse(templateOption.dataset.subjects)
+                };
+
+                // Generate data in memory using linked lists
+                await generateDataStructures(formData);
+                
+                // Display preview
+                displayPreview();
+                
+                hideLoadingModal();
+                
+            } catch (error) {
+                console.error('Error initializing:', error);
+                hideLoadingModal();
+                showNotification('Error generating data structure', 'error');
+            }
+        }
+
+        // Validate form
+        function validateForm() {
+            let isValid = true;
+            
+            // Clear previous errors
+            clearAllErrors();
+            
+            // Year validation
+            const year = parseInt(yearInput.value);
+            if (!year || year < 2020 || year > 2030) {
+                showFieldError('yearError', 'Please enter a valid year (2020-2030)');
+                isValid = false;
+            }
+            
+            // Name validation
+            if (!nameInput.value.trim()) {
+                showFieldError('nameError', 'Class name is required');
+                isValid = false;
+            }
+            
+            // Test count validation
+            const testCount = parseInt(testCountInput.value);
+            if (!testCount || testCount < 1 || testCount > 10) {
+                showFieldError('testCountError', 'Test count must be between 1 and 10');
+                isValid = false;
+            }
+            
+            // Student count validation
+            const studentCount = parseInt(studentCountInput.value);
+            if (!studentCount || studentCount < 1 || studentCount > 100) {
+                showFieldError('studentCountError', 'Student count must be between 1 and 100');
+                isValid = false;
+            }
+            
+            // Template validation
+            if (!templateSelect.value) {
+                showFieldError('templateError', 'Please select a template');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // Get form data
+        function getFormData() {
+            return {
+                year: parseInt(yearInput.value),
+                name: nameInput.value.trim(),
+                testCount: parseInt(testCountInput.value),
+                studentCount: parseInt(studentCountInput.value),
+                template: templateSelect.value
+            };
+        }
+
+        // Generate data structures using linked lists
+        async function generateDataStructures(formData) {
+            // Clear existing data
+            summaryList.clear();
+            marksList.clear();
+            subjectsList.clear();
+            
+            // Add subjects to linked list
+            selectedTemplate.subjects.forEach(subject => {
+                subjectsList.add(subject);
+            });
+            
+            // Create summary object
+            currentSummary = {
+                id: generateId(),
+                name: formData.name,
+                year: formData.year,
+                test_count: formData.testCount,
+                student_count: formData.studentCount
+            };
+            
+            // Add summary to linked list
+            summaryList.add(currentSummary);
+            
+            // Generate marks for each test and student
+            currentMarks = [];
+            const subjects = subjectsList.toArray();
+            
+            for (let testNum = 1; testNum <= formData.testCount; testNum++) {
+                for (let studentIndex = 1; studentIndex <= formData.studentCount; studentIndex++) {
+                    const marksObj = {
+                        id: generateId(),
+                        summary_id: currentSummary.id,
+                        test_number: testNum,
+                        index: studentIndex,
+                        marks: {}
+                    };
+                    
+                    // Initialize marks for each subject with 0
+                    subjects.forEach(subject => {
+                        marksObj.marks[subject] = 0;
+                    });
+                    
+                    currentMarks.push(marksObj);
+                    marksList.add(marksObj);
+                }
+            }
+        }
+
+        // Display preview
+        function displayPreview() {
+            // Hide form, show preview
+            initForm.classList.add('hidden');
+            previewSection.classList.remove('hidden');
+            
+            // Display summary info
+            displaySummaryInfo();
+            
+            // Display marks tables
+            displayMarksTables();
+            
+            previewSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Display summary information
+        function displaySummaryInfo() {
+            const summaryInfo = document.getElementById('summaryInfo');
+            summaryInfo.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="text-sm text-blue-600">ID</div>
+                    <div class="font-semibold">${currentSummary.id}</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="text-sm text-green-600">Name</div>
+                    <div class="font-semibold">${escapeHtml(currentSummary.name)}</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <div class="text-sm text-purple-600">Year</div>
+                    <div class="font-semibold">${currentSummary.year}</div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <div class="text-sm text-orange-600">Tests</div>
+                    <div class="font-semibold">${currentSummary.test_count}</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <div class="text-sm text-red-600">Students</div>
+                    <div class="font-semibold">${currentSummary.student_count}</div>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-lg">
+                    <div class="text-sm text-indigo-600">Template</div>
+                    <div class="font-semibold">${escapeHtml(selectedTemplate.name.split(' (')[0])}</div>
+                </div>
+            `;
+        }
+
+        // Display marks tables
+        function displayMarksTables() {
+            const container = document.getElementById('marksTablesContainer');
+            container.innerHTML = '';
+            
+            const subjects = subjectsList.toArray();
+            
+            for (let testNum = 1; testNum <= currentSummary.test_count; testNum++) {
+                const tableDiv = document.createElement('div');
+                tableDiv.className = 'bg-white rounded-lg shadow-md p-6 mb-6';
+                
+                tableDiv.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Test ${testNum} Marks</h3>
+                    <div class="table-container">
+                        <table class="min-w-full border border-gray-200">
+                            <thead class="sticky-header bg-gray-50">
+                                <tr>
+                                    <th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-900">Student Index</th>
+                                    ${subjects.map(subject => 
+                                        `<th class="border border-gray-200 px-4 py-2 text-left font-medium text-gray-900">${escapeHtml(subject)}</th>`
+                                    ).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${generateTableRows(testNum, subjects)}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.appendChild(tableDiv);
+            }
+        }
+
+        // Generate table rows for a test
+        function generateTableRows(testNum, subjects) {
+            let rows = '';
+            
+            for (let studentIndex = 1; studentIndex <= currentSummary.student_count; studentIndex++) {
+                rows += `
+                    <tr class="${studentIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}">
+                        <td class="border border-gray-200 px-4 py-2 font-medium">${studentIndex}</td>
+                        ${subjects.map(subject => 
+                            `<td class="border border-gray-200 px-4 py-2">0</td>`
+                        ).join('')}
+                    </tr>
+                `;
+            }
+            
+            return rows;
+        }
+
+        // Save to database
+        async function saveToDatabase() {
+            showLoadingModal('Saving Data', 'Saving summary and marks to database...');
+            
+            try {
+                const payload = {
+                    summary: currentSummary,
+                    marks: currentMarks,
+                    subjects: subjectsList.toArray()
+                };
+                
+                console.log('Sending payload to server:', payload);
+                
+                const response = await fetch('/api/summary/initialize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const result = await response.json();
+                console.log('Server response:', result);
+                
+                if (result.success) {
+                    hideLoadingModal();
+                    showNotification('Summary report initialized successfully!', 'success');
+                    
+                    // Show additional success information
+                    if (result.data) {
+                        console.log('Summary saved:', result.data.summary);
+                        console.log('Marks records created:', result.data.totalMarksRecords);
+                    }
+                    
+                    // Redirect back to summary home after delay
+                    setTimeout(() => {
+                        window.location.href = '/summary';
+                    }, 3000);
+                } else {
+                    hideLoadingModal();
+                    console.error('Server returned error:', result.error);
+                    showNotification(result.error || 'Failed to save summary report', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error saving to database:', error);
+                hideLoadingModal();
+                showNotification('Network error. Please try again. Error: ' + error.message, 'error');
+            }
+        }
+
+        // Edit form (go back to form)
+        function editForm() {
+            initForm.classList.remove('hidden');
+            previewSection.classList.add('hidden');
+            initForm.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Reset form
+        function resetForm() {
+            summaryForm.reset();
+            clearAllErrors();
+            
+            // Clear data structures
+            if (summaryList) summaryList.clear();
+            if (marksList) marksList.clear();
+            if (subjectsList) subjectsList.clear();
+            
+            currentSummary = null;
+            currentMarks = [];
+            selectedTemplate = null;
+            
+            showNotification('Form reset successfully', 'info');
+        }
+
+        // Go back to summary home
+        function goBack() {
+            if (currentSummary || currentMarks.length > 0) {
+                if (confirm('Are you sure you want to leave? Your progress will be lost.')) {
+                    window.location.href = '/summary';
+                }
+            } else {
+                window.location.href = '/summary';
+            }
+        }
+
+        // Utility functions
+        function generateId() {
+            return 'sum_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function showFieldError(errorId, message) {
+            const errorElement = document.getElementById(errorId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        function clearAllErrors() {
+            const errorIds = ['yearError', 'nameError', 'testCountError', 'studentCountError', 'templateError'];
+            errorIds.forEach(id => {
+                const element = document.getElementById(id);
+                element.classList.add('hidden');
+            });
+        }
+
+        function showLoadingModal(title, message) {
+            loadingTitle.textContent = title;
+            loadingMessage.textContent = message;
+            loadingModal.classList.remove('hidden');
+            loadingModal.classList.add('flex');
+        }
+
+        function hideLoadingModal() {
+            loadingModal.classList.add('hidden');
+            loadingModal.classList.remove('flex');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            let bgColor = 'bg-blue-500';
+            if (type === 'success') bgColor = 'bg-green-500';
+            else if (type === 'error') bgColor = 'bg-red-500';
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${bgColor}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            const duration = type === 'success' ? 4000 : 3000;
+            setTimeout(() => {
+                notification.remove();
+            }, duration);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLinkedLists();
+            loadTemplates();
+            
+            // Focus on year input
+            yearInput.focus();
+        });
+
+        // Handle page unload warning
+        window.addEventListener('beforeunload', (e) => {
+            if (currentSummary || currentMarks.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>

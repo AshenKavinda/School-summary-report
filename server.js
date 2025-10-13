@@ -5,13 +5,17 @@ require('dotenv').config();
 
 // Import controllers
 const SubjectTemplateController = require('./src/controller/subject_service/subject_tem');
+const SummaryInitController = require('./src/controller/initialization_report_home/summary_init');
+const MarkManagerController = require('./src/controller/subject_manager_service/mark_manager');
 const { dbConnection } = require('./src/model/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize controller
+// Initialize controllers
 const subjectTemplateController = new SubjectTemplateController();
+const summaryInitController = new SummaryInitController();
+const markManagerController = new MarkManagerController();
 
 // Middleware
 app.use(cors());
@@ -26,9 +30,14 @@ async function initializeDatabase() {
     try {
         await dbConnection.connect();
         console.log('Database connected successfully');
+        
+        // Set database for models if needed
+        console.log('Database connection established for all models');
+        
     } catch (error) {
         console.error('Failed to connect to database:', error.message);
-        process.exit(1);
+        console.log('Server will continue without database connection');
+        // Don't exit, allow server to run without database for development
     }
 }
 
@@ -40,6 +49,24 @@ app.get('/api/templates/:id', (req, res) => subjectTemplateController.getTemplat
 app.put('/api/templates/:id', (req, res) => subjectTemplateController.updateTemplate(req, res));
 app.delete('/api/templates/:id', (req, res) => subjectTemplateController.deleteTemplate(req, res));
 
+// API Routes for Summary Management
+app.get('/api/summary/years', (req, res) => summaryInitController.getAvailableYears(req, res));
+app.get('/api/summary/names', (req, res) => summaryInitController.getAvailableNames(req, res));
+app.get('/api/summary/tests', (req, res) => summaryInitController.getAvailableTests(req, res));
+app.get('/api/summary/data', (req, res) => summaryInitController.getSummaryData(req, res));
+app.get('/api/summary/filter', (req, res) => summaryInitController.getSummaryData(req, res));
+app.post('/api/summary/initialize', (req, res) => summaryInitController.initializeSummary(req, res));
+app.get('/api/summary/statistics', (req, res) => summaryInitController.getSummaryStatistics(req, res));
+app.get('/api/summary/:id', (req, res) => summaryInitController.getSummaryById(req, res));
+app.get('/api/summary/:summaryId/marks', (req, res) => summaryInitController.getMarksBySummary(req, res));
+app.delete('/api/summary/:id', (req, res) => summaryInitController.deleteSummary(req, res));
+
+// API Routes for Marks Manager
+app.get('/api/marks/:summaryId/:subject/:testNumber', (req, res) => markManagerController.getMarksData(req, res));
+app.put('/api/marks', (req, res) => markManagerController.updateMarks(req, res));
+app.get('/api/marks/:summaryId/:subject/:testNumber/export', (req, res) => markManagerController.exportMarks(req, res));
+app.get('/api/marks/:summaryId/:subject/:testNumber/statistics', (req, res) => markManagerController.getStatistics(req, res));
+
 // Page Routes
 app.get('/templates', (req, res) => {
     res.sendFile(path.join(__dirname, 'src/view/subject_tem_home.html'));
@@ -47,6 +74,19 @@ app.get('/templates', (req, res) => {
 
 app.get('/templates/create', (req, res) => {
     res.sendFile(path.join(__dirname, 'src/view/subject_tem_create.html'));
+});
+
+// Summary Report Routes
+app.get('/summary', (req, res) => summaryInitController.renderSummaryHome(req, res));
+app.get('/summary/initialization', (req, res) => summaryInitController.renderInitializationPage(req, res));
+app.get('/summary/details/:id', (req, res) => {
+    // Future implementation for summary details page
+    res.json({ message: 'Summary details page not implemented yet' });
+});
+
+// Marks Manager Route (placeholder)
+app.get('/marks_manager', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src/view/marks_manager.html'));
 });
 
 // Route to serve index.html
@@ -62,6 +102,8 @@ async function startServer() {
         app.listen(PORT, () => {
             console.log(`Server is running on http://localhost:${PORT}`);
             console.log(`Subject Templates: http://localhost:${PORT}/templates`);
+            console.log(`Summary Manager: http://localhost:${PORT}/summary`);
+            console.log(`Summary Initialization: http://localhost:${PORT}/summary/initialization`);
         });
     } catch (error) {
         console.error('Failed to start server:', error.message);

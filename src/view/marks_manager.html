@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marks Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .marks-table {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Marks Manager</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage student marks and assessments</p>
+                </div>
+                <button 
+                    onclick="goBack()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span>Back to Summary</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Parameter Display Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8 fade-in">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Session Information</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="text-sm text-blue-600 font-medium">Year</div>
+                    <div class="text-lg font-bold text-blue-800" id="displayYear">-</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="text-sm text-green-600 font-medium">Class Name</div>
+                    <div class="text-lg font-bold text-green-800" id="displayClassName">-</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <div class="text-sm text-purple-600 font-medium">Test Number</div>
+                    <div class="text-lg font-bold text-purple-800" id="displayTestNumber">-</div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg">
+                    <div class="text-sm text-orange-600 font-medium">Subject</div>
+                    <div class="text-lg font-bold text-orange-800" id="displaySubject">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Debug Information (Temporary) -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 fade-in">
+            <h3 class="text-lg font-medium text-yellow-800 mb-2">🐛 Debug Information (Temporary)</h3>
+            <div class="space-y-2 text-sm">
+                <div><strong>Raw URL Parameters:</strong> <span id="rawParams" class="font-mono bg-yellow-100 px-2 py-1 rounded"></span></div>
+                <div><strong>Parsed Parameters:</strong></div>
+                <div class="bg-yellow-100 p-3 rounded font-mono text-xs" id="parsedParams"></div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading marks data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="text-center py-12 hidden">
+            <div class="text-red-500 mb-4">
+                <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Error loading marks</h3>
+            <p class="mt-1 text-gray-500" id="errorMessage">Something went wrong. Please try again.</p>
+            <button 
+                onclick="loadMarksData()"
+                class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+                Retry
+            </button>
+        </div>
+
+        <!-- Marks Table -->
+        <div id="marksContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Student Marks</h3>
+                <p class="text-sm text-gray-600">Manage marks for the selected test and subject</p>
+            </div>
+            
+            <div class="marks-table">
+                <table class="min-w-full">
+                    <thead class="sticky-header bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Student Index</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Student Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Mark</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Grade</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="marksTableBody">
+                        <!-- Marks data will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="px-6 py-4 bg-gray-50 border-t">
+                <div class="flex justify-end space-x-4">
+                    <button 
+                        onclick="saveAllMarks()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                        Save All Changes
+                    </button>
+                    <button 
+                        onclick="exportMarks()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                        Export to CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Global variables for parameters
+        let sessionParams = {
+            year: null,
+            className: null,
+            testNumber: null,
+            subject: null
+        };
+        
+        let marksData = [];
+
+        // Parse URL parameters
+        function parseUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Get all parameters
+            sessionParams.year = urlParams.get('year');
+            sessionParams.className = urlParams.get('className');
+            sessionParams.testNumber = urlParams.get('testNumber');
+            sessionParams.subject = urlParams.get('subject');
+            
+            // Update debug information
+            document.getElementById('rawParams').textContent = window.location.search;
+            document.getElementById('parsedParams').textContent = JSON.stringify(sessionParams, null, 2);
+            
+            // Display parameters
+            updateParameterDisplay();
+            
+            console.log('Parsed URL Parameters:', sessionParams);
+        }
+
+        // Update parameter display
+        function updateParameterDisplay() {
+            document.getElementById('displayYear').textContent = sessionParams.year || '-';
+            document.getElementById('displayClassName').textContent = sessionParams.className || '-';
+            document.getElementById('displayTestNumber').textContent = sessionParams.testNumber || '-';
+            document.getElementById('displaySubject').textContent = sessionParams.subject || '-';
+        }
+
+        // Validate parameters
+        function validateParameters() {
+            const required = ['year', 'className', 'testNumber', 'subject'];
+            const missing = required.filter(param => !sessionParams[param]);
+            
+            if (missing.length > 0) {
+                showError(`Missing required parameters: ${missing.join(', ')}`);
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Load marks data from server
+        async function loadMarksData() {
+            if (!validateParameters()) {
+                return;
+            }
+            
+            showLoadingState();
+            
+            try {
+                const params = new URLSearchParams(sessionParams);
+                const response = await fetch(`/api/marks/data?${params}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    marksData = result.marks || [];
+                    displayMarksData();
+                } else {
+                    showError(result.error || 'Failed to load marks data');
+                }
+            } catch (error) {
+                console.error('Error loading marks:', error);
+                showError('Network error. Please check your connection.');
+            }
+        }
+
+        // Display marks data in table
+        function displayMarksData() {
+            const tableBody = document.getElementById('marksTableBody');
+            
+            if (marksData.length === 0) {
+                // Show placeholder data for now
+                const placeholderData = generatePlaceholderData();
+                displayPlaceholderMarks(placeholderData);
+            } else {
+                // Display real data
+                tableBody.innerHTML = '';
+                marksData.forEach((mark, index) => {
+                    const row = createMarkRow(mark, index);
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            showMarksContainer();
+        }
+
+        // Generate placeholder data for demonstration
+        function generatePlaceholderData() {
+            const data = [];
+            const studentCount = 25; // Default student count
+            
+            for (let i = 1; i <= studentCount; i++) {
+                data.push({
+                    index: i,
+                    studentName: `Student ${i.toString().padStart(2, '0')}`,
+                    mark: Math.floor(Math.random() * 41) + 60, // Random mark between 60-100
+                    grade: 'A' // Will be calculated
+                });
+            }
+            
+            return data;
+        }
+
+        // Display placeholder marks
+        function displayPlaceholderMarks(data) {
+            const tableBody = document.getElementById('marksTableBody');
+            tableBody.innerHTML = '';
+            
+            data.forEach((student, index) => {
+                const grade = calculateGrade(student.mark);
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${student.index}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${student.studentName}</td>
+                    <td class="px-6 py-4">
+                        <input 
+                            type="number" 
+                            value="${student.mark}" 
+                            min="0" 
+                            max="100" 
+                            class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onchange="updateGrade(this, ${index})"
+                        >
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="grade-display inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor(grade)}">
+                            ${grade}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button 
+                            onclick="editStudent(${index})"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                            Edit
+                        </button>
+                    </td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Calculate grade based on mark
+        function calculateGrade(mark) {
+            if (mark >= 90) return 'A+';
+            if (mark >= 85) return 'A';
+            if (mark >= 80) return 'A-';
+            if (mark >= 75) return 'B+';
+            if (mark >= 70) return 'B';
+            if (mark >= 65) return 'B-';
+            if (mark >= 60) return 'C+';
+            if (mark >= 55) return 'C';
+            if (mark >= 50) return 'C-';
+            return 'F';
+        }
+
+        // Get grade color class
+        function getGradeColor(grade) {
+            if (grade.startsWith('A')) return 'bg-green-100 text-green-800';
+            if (grade.startsWith('B')) return 'bg-blue-100 text-blue-800';
+            if (grade.startsWith('C')) return 'bg-yellow-100 text-yellow-800';
+            return 'bg-red-100 text-red-800';
+        }
+
+        // Update grade when mark changes
+        function updateGrade(input, index) {
+            const mark = parseInt(input.value);
+            const grade = calculateGrade(mark);
+            const gradeDisplay = input.closest('tr').querySelector('.grade-display');
+            
+            gradeDisplay.textContent = grade;
+            gradeDisplay.className = `grade-display inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor(grade)}`;
+        }
+
+        // Edit student (placeholder function)
+        function editStudent(index) {
+            showNotification('Edit student functionality will be implemented', 'info');
+        }
+
+        // Save all marks (placeholder function)
+        function saveAllMarks() {
+            showNotification('Save functionality will be implemented', 'info');
+        }
+
+        // Export marks (placeholder function)
+        function exportMarks() {
+            showNotification('Export functionality will be implemented', 'info');
+        }
+
+        // State management functions
+        function showLoadingState() {
+            hideAllStates();
+            document.getElementById('loadingState').classList.remove('hidden');
+        }
+
+        function showError(message) {
+            hideAllStates();
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function showMarksContainer() {
+            hideAllStates();
+            document.getElementById('marksContainer').classList.remove('hidden');
+        }
+
+        function hideAllStates() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('marksContainer').classList.add('hidden');
+        }
+
+        // Go back to summary page
+        function goBack() {
+            window.location.href = '/summary';
+        }
+
+        // Utility functions
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            let bgColor = 'bg-blue-500';
+            if (type === 'success') bgColor = 'bg-green-500';
+            else if (type === 'error') bgColor = 'bg-red-500';
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${bgColor}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            parseUrlParameters();
+            loadMarksData();
+        });
+    </script>
+</body>
+</html>
