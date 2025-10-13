@@ -270,15 +270,29 @@
                 if (nameSelect.value) params.append('name', nameSelect.value);
                 if (testSelect.value) params.append('test', testSelect.value);
 
+                console.log('Search filters:', {
+                    year: yearSelect.value,
+                    name: nameSelect.value,
+                    test: testSelect.value
+                });
+                console.log('API URL:', `/api/summary/data?${params}`);
+
                 const response = await fetch(`/api/summary/data?${params}`);
                 const data = await response.json();
+                
+                console.log('API Response:', data);
                 
                 if (data.success) {
                     summaryData = data.summaries || [];
                     subjectsData = data.subjects || [];
                     
+                    console.log('Summaries loaded:', summaryData.length);
+                    console.log('Subjects loaded:', subjectsData.length);
+                    console.log('Subjects data:', subjectsData);
+                    
                     displayData();
                 } else {
+                    console.error('API Error:', data.error);
                     showErrorState(data.error || 'Failed to load summary data');
                 }
             } catch (error) {
@@ -289,21 +303,62 @@
 
         // Display loaded data
         function displayData() {
+            console.log('displayData called');
+            console.log('summaryData.length:', summaryData.length);
+            console.log('subjectsData.length:', subjectsData.length);
+            
             if (summaryData.length === 0 && subjectsData.length === 0) {
+                console.log('No data found, showing empty state');
                 showEmptyState();
                 return;
             }
 
             hideAllStates();
             
-            if (summaryData.length > 0) {
+            // Check if filters are applied
+            const hasFilters = yearSelect.value || nameSelect.value || testSelect.value;
+            const hasAllFilters = yearSelect.value && nameSelect.value && testSelect.value;
+            
+            console.log('Filter status:', {
+                hasFilters,
+                hasAllFilters,
+                year: yearSelect.value,
+                name: nameSelect.value,
+                test: testSelect.value
+            });
+            
+            if (summaryData.length > 0 && !hasAllFilters) {
+                console.log('Displaying summary data');
+                // Show summary data when not all filters are selected
                 displaySummaryData();
                 summaryGrid.classList.remove('hidden');
             }
             
-            if (subjectsData.length > 0) {
+            if (subjectsData.length > 0 && hasAllFilters) {
+                console.log('Displaying subjects data');
+                // Show subjects only when all filters are selected
                 displaySubjectsData();
                 subjectsGrid.classList.remove('hidden');
+            } else if (hasFilters && !hasAllFilters) {
+                console.log('Showing filter message');
+                // Show message when some but not all filters are selected
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'text-center py-8';
+                messageDiv.innerHTML = `
+                    <div class="text-gray-500">
+                        <p class="text-lg">Please select Year, Class Name, and Test to view subjects</p>
+                        <p class="text-sm mt-2">All three filters are required to display subject cards</p>
+                    </div>
+                `;
+                
+                hideAllStates();
+                const main = document.querySelector('main');
+                const existingMessage = document.getElementById('filterMessage');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+                messageDiv.id = 'filterMessage';
+                main.appendChild(messageDiv);
             }
         }
 
@@ -360,34 +415,63 @@
             const container = subjectsGrid.querySelector('div');
             container.innerHTML = '';
 
+            const year = yearSelect.value;
+            const className = nameSelect.value;
+            const testNumber = testSelect.value;
+
+            if (!year || !className || !testNumber) {
+                // If not all filters are selected, don't show subjects
+                return;
+            }
+
             subjectsData.forEach(subject => {
-                const subjectCard = createSubjectCard(subject);
+                const subjectCard = createSubjectCard(subject, year, className, testNumber);
                 container.appendChild(subjectCard);
             });
         }
 
         // Create subject card HTML
-        function createSubjectCard(subject) {
+        function createSubjectCard(subject, year, className, testNumber) {
             const card = document.createElement('div');
-            card.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow fade-in';
+            card.className = 'bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer fade-in';
             
-            const year = yearSelect.value;
-            const name = nameSelect.value;
-            const test = testSelect.value;
+            // Extract test number from test string (e.g., "Test 1" -> "1")
+            const testNum = testNumber.replace(/\D/g, '') || testNumber;
             
             card.innerHTML = `
                 <div class="text-center">
-                    <h4 class="font-medium text-gray-900 mb-2">${escapeHtml(subject.name || subject)}</h4>
-                    <a 
-                        href="/marks_manager?year=${encodeURIComponent(year)}&name=${encodeURIComponent(name)}&test=${encodeURIComponent(test)}&subject=${encodeURIComponent(subject.name || subject)}"
-                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm rounded-lg transition duration-200"
+                    <div class="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                    <h4 class="font-semibold text-gray-900 mb-2">${escapeHtml(subject.name || subject)}</h4>
+                    <div class="text-sm text-gray-600 mb-4">
+                        <div>${escapeHtml(className)}</div>
+                        <div>${escapeHtml(testNumber)} - ${year}</div>
+                    </div>
+                    <button 
+                        onclick="redirectToMarksManager('${encodeURIComponent(year)}', '${encodeURIComponent(className)}', '${encodeURIComponent(testNum)}', '${encodeURIComponent(subject.name || subject)}')"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
                     >
                         Manage Marks
-                    </a>
+                    </button>
                 </div>
             `;
             
             return card;
+        }
+
+        // Redirect to marks manager with parameters
+        function redirectToMarksManager(year, className, testNumber, subject) {
+            const params = new URLSearchParams({
+                year: year,
+                className: className,
+                testNumber: testNumber,
+                subject: subject
+            });
+            
+            window.location.href = `/marks_manager?${params.toString()}`;
         }
 
         // Handle dropdown changes
@@ -442,6 +526,12 @@
             summaryGrid.classList.add('hidden');
             subjectsGrid.classList.add('hidden');
             errorState.classList.add('hidden');
+            
+            // Remove filter message if exists
+            const existingMessage = document.getElementById('filterMessage');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
         }
 
         // Utility functions

@@ -175,29 +175,49 @@ class SummaryInitModel {
             let summaries = [];
             let subjects = [];
 
-            if (this.db) {
+            const db = await this.getDb();
+            
+            if (db) {
                 // Build query based on filters
                 const query = {};
                 if (filters.year) query.year = parseInt(filters.year);
                 if (filters.name) query.name = filters.name;
                 
+                console.log('Querying summaries with filters:', query);
+                
                 // Get summaries from database
-                summaries = await this.db.collection('summaries').find(query).toArray();
+                summaries = await db.collection('summaries').find(query).toArray();
+                console.log(`Found ${summaries.length} summaries`);
                 
                 // Get subjects from marks collection for the filtered summaries
                 if (summaries.length > 0) {
                     const summaryIds = summaries.map(s => s.id);
-                    const marksWithSubjects = await this.db.collection('marks')
-                        .find({ summary_id: { $in: summaryIds } })
+                    
+                    // If test filter is provided, filter by test number
+                    const marksQuery = { summary_id: { $in: summaryIds } };
+                    if (filters.test) {
+                        // Extract test number from test string (e.g., "Test 1" -> 1)
+                        const testNum = filters.test.replace(/\D/g, '');
+                        if (testNum) {
+                            marksQuery.test_number = parseInt(testNum);
+                        }
+                    }
+                    
+                    console.log('Querying marks with filters:', marksQuery);
+                    
+                    const marksWithSubjects = await db.collection('marks')
+                        .find(marksQuery)
                         .limit(1)
                         .toArray();
                     
                     if (marksWithSubjects.length > 0) {
                         subjects = Object.keys(marksWithSubjects[0].marks || {});
+                        console.log('Found subjects:', subjects);
                     }
                 }
             } else {
                 // Fallback for when database is not connected
+                console.warn('Database not available, using fallback data');
                 if (filters.year || filters.name || filters.test) {
                     summaries = [
                         {
@@ -222,7 +242,8 @@ class SummaryInitModel {
             return {
                 success: true,
                 summaries: summaries,
-                subjects: subjects
+                subjects: subjects,
+                filters: filters
             };
         } catch (error) {
             console.error('Error fetching summary data:', error.message);

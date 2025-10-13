@@ -6,6 +6,7 @@ require('dotenv').config();
 // Import controllers
 const SubjectTemplateController = require('./src/controller/subject_service/subject_tem');
 const SummaryInitController = require('./src/controller/initialization_report_home/summary_init');
+const MarkManagerController = require('./src/controller/subject_manager_service/mark_manager');
 const { dbConnection } = require('./src/model/db');
 
 const app = express();
@@ -14,6 +15,7 @@ const PORT = process.env.PORT || 3000;
 // Initialize controllers
 const subjectTemplateController = new SubjectTemplateController();
 const summaryInitController = new SummaryInitController();
+const markManagerController = new MarkManagerController();
 
 // Middleware
 app.use(cors());
@@ -52,11 +54,18 @@ app.get('/api/summary/years', (req, res) => summaryInitController.getAvailableYe
 app.get('/api/summary/names', (req, res) => summaryInitController.getAvailableNames(req, res));
 app.get('/api/summary/tests', (req, res) => summaryInitController.getAvailableTests(req, res));
 app.get('/api/summary/data', (req, res) => summaryInitController.getSummaryData(req, res));
+app.get('/api/summary/filter', (req, res) => summaryInitController.getSummaryData(req, res));
 app.post('/api/summary/initialize', (req, res) => summaryInitController.initializeSummary(req, res));
 app.get('/api/summary/statistics', (req, res) => summaryInitController.getSummaryStatistics(req, res));
 app.get('/api/summary/:id', (req, res) => summaryInitController.getSummaryById(req, res));
 app.get('/api/summary/:summaryId/marks', (req, res) => summaryInitController.getMarksBySummary(req, res));
 app.delete('/api/summary/:id', (req, res) => summaryInitController.deleteSummary(req, res));
+
+// API Routes for Marks Manager
+app.get('/api/marks/:summaryId/:subject/:testNumber', (req, res) => markManagerController.getMarksData(req, res));
+app.put('/api/marks', (req, res) => markManagerController.updateMarks(req, res));
+app.get('/api/marks/:summaryId/:subject/:testNumber/export', (req, res) => markManagerController.exportMarks(req, res));
+app.get('/api/marks/:summaryId/:subject/:testNumber/statistics', (req, res) => markManagerController.getStatistics(req, res));
 
 // Page Routes
 app.get('/templates', (req, res) => {
