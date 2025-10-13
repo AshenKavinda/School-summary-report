@@ -224,6 +224,8 @@
 
     <script>
         // Initialize linked lists for data management
+        let summaryList;
+        let marksList;
         let subjectsList;
         
         // Current data
@@ -234,10 +236,14 @@
         // Initialize linked lists
         function initializeLinkedLists() {
             if (typeof DLinkedList !== 'undefined') {
+                summaryList = new DLinkedList();
+                marksList = new DLinkedList();
                 subjectsList = new DLinkedList();
             } else {
                 console.warn('DLinkedList not found, using array fallback');
                 // Fallback implementations
+                summaryList = createFallbackList();
+                marksList = createFallbackList();
                 subjectsList = createFallbackList();
             }
         }
@@ -402,6 +408,7 @@
         // Generate data structures using linked lists
         async function generateDataStructures(formData) {
             // Clear existing data
+            summaryList.clear();
             marksList.clear();
             subjectsList.clear();
             
@@ -418,7 +425,9 @@
                 test_count: formData.testCount,
                 student_count: formData.studentCount
             };
-
+            
+            // Add summary to linked list
+            summaryList.add(currentSummary);
             
             // Generate marks for each test and student
             currentMarks = [];
@@ -440,6 +449,7 @@
                     });
                     
                     currentMarks.push(marksObj);
+                    marksList.add(marksObj);
                 }
             }
         }
@@ -609,6 +619,8 @@
             clearAllErrors();
             
             // Clear data structures
+            if (summaryList) summaryList.clear();
+            if (marksList) marksList.clear();
             if (subjectsList) subjectsList.clear();
             
             currentSummary = null;
