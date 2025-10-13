@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summary Report Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .summary-card {
+            transition: all 0.3s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Summary Report Manager</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage class summary reports and marks</p>
+                </div>
+                <button 
+                    id="initializationBtn"
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                    </svg>
+                    <span>Initialize Summary</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filters Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Filter Summary Reports</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Year Dropdown -->
+                <div>
+                    <label for="yearSelect" class="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                    <select 
+                        id="yearSelect" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">Select Year</option>
+                    </select>
+                </div>
+
+                <!-- Name Dropdown -->
+                <div>
+                    <label for="nameSelect" class="block text-sm font-medium text-gray-700 mb-2">Class Name</label>
+                    <select 
+                        id="nameSelect" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">Select Class</option>
+                    </select>
+                </div>
+
+                <!-- Test Dropdown -->
+                <div>
+                    <label for="testSelect" class="block text-sm font-medium text-gray-700 mb-2">Test</label>
+                    <select 
+                        id="testSelect" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">Select Test</option>
+                    </select>
+                </div>
+
+                <!-- Search Button -->
+                <div class="flex items-end">
+                    <button 
+                        id="searchBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <span>Search</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12 hidden">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading data...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-12 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No summary reports found</h3>
+            <p class="mt-1 text-gray-500">Initialize your first summary report to get started.</p>
+            <button 
+                onclick="redirectToInitialization()"
+                class="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200"
+            >
+                Initialize Summary
+            </button>
+        </div>
+
+        <!-- Summary Reports Grid -->
+        <div id="summaryGrid" class="hidden">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Summary Reports</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Summary cards will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Subjects Grid -->
+        <div id="subjectsGrid" class="hidden">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Subjects</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Subject cards will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="text-center py-12 hidden">
+            <div class="text-red-500 mb-4">
+                <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Error loading data</h3>
+            <p class="mt-1 text-gray-500" id="errorMessage">Something went wrong. Please try again.</p>
+            <button 
+                onclick="loadData()"
+                class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+                Retry
+            </button>
+        </div>
+    </main>
+
+    <script>
+        let summaryData = [];
+        let subjectsData = [];
+
+        // DOM elements
+        const initializationBtn = document.getElementById('initializationBtn');
+        const yearSelect = document.getElementById('yearSelect');
+        const nameSelect = document.getElementById('nameSelect');
+        const testSelect = document.getElementById('testSelect');
+        const searchBtn = document.getElementById('searchBtn');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const summaryGrid = document.getElementById('summaryGrid');
+        const subjectsGrid = document.getElementById('subjectsGrid');
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Event listeners
+        initializationBtn.addEventListener('click', redirectToInitialization);
+        searchBtn.addEventListener('click', handleSearch);
+        yearSelect.addEventListener('change', handleYearChange);
+        nameSelect.addEventListener('change', handleNameChange);
+        testSelect.addEventListener('change', handleTestChange);
+
+        // Redirect to initialization page
+        function redirectToInitialization() {
+            window.location.href = '/summary/initialization';
+        }
+
+        // Load initial data
+        async function loadData() {
+            showLoadingState();
+            
+            try {
+                // Load dropdowns data
+                await Promise.all([
+                    loadYears(),
+                    loadNames(),
+                    loadTests()
+                ]);
+
+                // Load initial summary data
+                await loadSummaryData();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showErrorState('Failed to load data. Please check your connection.');
+            }
+        }
+
+        // Load years for dropdown
+        async function loadYears() {
+            try {
+                const response = await fetch('/api/summary/years');
+                const data = await response.json();
+                
+                if (data.success) {
+                    populateDropdown(yearSelect, data.years, 'year');
+                }
+            } catch (error) {
+                console.error('Error loading years:', error);
+            }
+        }
+
+        // Load names for dropdown
+        async function loadNames() {
+            try {
+                const response = await fetch('/api/summary/names');
+                const data = await response.json();
+                
+                if (data.success) {
+                    populateDropdown(nameSelect, data.names, 'name');
+                }
+            } catch (error) {
+                console.error('Error loading names:', error);
+            }
+        }
+
+        // Load tests for dropdown
+        async function loadTests() {
+            try {
+                const response = await fetch('/api/summary/tests');
+                const data = await response.json();
+                
+                if (data.success) {
+                    populateDropdown(testSelect, data.tests, 'test');
+                }
+            } catch (error) {
+                console.error('Error loading tests:', error);
+            }
+        }
+
+        // Populate dropdown with data
+        function populateDropdown(selectElement, data, valueField) {
+            // Clear existing options except the first one
+            while (selectElement.children.length > 1) {
+                selectElement.removeChild(selectElement.lastChild);
+            }
+
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueField] || item;
+                option.textContent = item[valueField] || item;
+                selectElement.appendChild(option);
+            });
+        }
+
+        // Load summary data based on filters
+        async function loadSummaryData() {
+            try {
+                const params = new URLSearchParams();
+                
+                if (yearSelect.value) params.append('year', yearSelect.value);
+                if (nameSelect.value) params.append('name', nameSelect.value);
+                if (testSelect.value) params.append('test', testSelect.value);
+
+                const response = await fetch(`/api/summary/data?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    summaryData = data.summaries || [];
+                    subjectsData = data.subjects || [];
+                    
+                    displayData();
+                } else {
+                    showErrorState(data.error || 'Failed to load summary data');
+                }
+            } catch (error) {
+                console.error('Error loading summary data:', error);
+                showErrorState('Network error. Please check your connection.');
+            }
+        }
+
+        // Display loaded data
+        function displayData() {
+            if (summaryData.length === 0 && subjectsData.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            hideAllStates();
+            
+            if (summaryData.length > 0) {
+                displaySummaryData();
+                summaryGrid.classList.remove('hidden');
+            }
+            
+            if (subjectsData.length > 0) {
+                displaySubjectsData();
+                subjectsGrid.classList.remove('hidden');
+            }
+        }
+
+        // Display summary data
+        function displaySummaryData() {
+            const container = summaryGrid.querySelector('div');
+            container.innerHTML = '';
+
+            summaryData.forEach(summary => {
+                const summaryCard = createSummaryCard(summary);
+                container.appendChild(summaryCard);
+            });
+        }
+
+        // Create summary card HTML
+        function createSummaryCard(summary) {
+            const card = document.createElement('div');
+            card.className = 'summary-card bg-white rounded-lg shadow-md p-6 border border-gray-200 fade-in';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(summary.name)}</h3>
+                    <span class="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">${escapeHtml(summary.year)}</span>
+                </div>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Test Count:</span>
+                        <span class="font-medium">${summary.test_count}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Student Count:</span>
+                        <span class="font-medium">${summary.student_count}</span>
+                    </div>
+                </div>
+                
+                <div class="text-xs text-gray-500 mb-4">
+                    ID: ${summary.id}
+                </div>
+                
+                <button 
+                    onclick="viewSummaryDetails('${summary.id}')"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                >
+                    View Details
+                </button>
+            `;
+            
+            return card;
+        }
+
+        // Display subjects data
+        function displaySubjectsData() {
+            const container = subjectsGrid.querySelector('div');
+            container.innerHTML = '';
+
+            subjectsData.forEach(subject => {
+                const subjectCard = createSubjectCard(subject);
+                container.appendChild(subjectCard);
+            });
+        }
+
+        // Create subject card HTML
+        function createSubjectCard(subject) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-lg shadow-sm p-4 border border-gray-200 hover:shadow-md transition-shadow fade-in';
+            
+            const year = yearSelect.value;
+            const name = nameSelect.value;
+            const test = testSelect.value;
+            
+            card.innerHTML = `
+                <div class="text-center">
+                    <h4 class="font-medium text-gray-900 mb-2">${escapeHtml(subject.name || subject)}</h4>
+                    <a 
+                        href="/marks_manager?year=${encodeURIComponent(year)}&name=${encodeURIComponent(name)}&test=${encodeURIComponent(test)}&subject=${encodeURIComponent(subject.name || subject)}"
+                        class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-sm rounded-lg transition duration-200"
+                    >
+                        Manage Marks
+                    </a>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Handle dropdown changes
+        function handleYearChange() {
+            if (yearSelect.value) {
+                loadSummaryData();
+            }
+        }
+
+        function handleNameChange() {
+            if (nameSelect.value) {
+                loadSummaryData();
+            }
+        }
+
+        function handleTestChange() {
+            if (testSelect.value) {
+                loadSummaryData();
+            }
+        }
+
+        // Handle search
+        function handleSearch() {
+            loadSummaryData();
+        }
+
+        // View summary details
+        function viewSummaryDetails(summaryId) {
+            window.location.href = `/summary/details/${summaryId}`;
+        }
+
+        // State management functions
+        function showLoadingState() {
+            hideAllStates();
+            loadingState.classList.remove('hidden');
+        }
+
+        function showEmptyState() {
+            hideAllStates();
+            emptyState.classList.remove('hidden');
+        }
+
+        function showErrorState(message) {
+            hideAllStates();
+            errorMessage.textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
+        function hideAllStates() {
+            loadingState.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            summaryGrid.classList.add('hidden');
+            subjectsGrid.classList.add('hidden');
+            errorState.classList.add('hidden');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+    </script>
+</body>
+</html>
