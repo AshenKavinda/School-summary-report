@@ -223,45 +223,12 @@
     </div>
 
     <script>
-        // Initialize linked lists for data management
-        let summaryList;
-        let marksList;
-        let subjectsList;
-        
         // Current data
         let currentSummary = null;
         let currentMarks = [];
+        let subjectsList=[];
         let selectedTemplate = null;
 
-        // Initialize linked lists
-        function initializeLinkedLists() {
-            if (typeof DLinkedList !== 'undefined') {
-                summaryList = new DLinkedList();
-                marksList = new DLinkedList();
-                subjectsList = new DLinkedList();
-            } else {
-                console.warn('DLinkedList not found, using array fallback');
-                // Fallback implementations
-                summaryList = createFallbackList();
-                marksList = createFallbackList();
-                subjectsList = createFallbackList();
-            }
-        }
-
-        function createFallbackList() {
-            return {
-                items: [],
-                add: function(item) { this.items.push(item); return true; },
-                remove: function(item) { 
-                    const index = this.items.indexOf(item);
-                    if (index > -1) { this.items.splice(index, 1); return true; }
-                    return false;
-                },
-                toArray: function() { return [...this.items]; },
-                getSize: function() { return this.items.length; },
-                clear: function() { this.items = []; }
-            };
-        }
 
         // DOM elements
         const initForm = document.getElementById('initForm');
@@ -407,14 +374,10 @@
 
         // Generate data structures using linked lists
         async function generateDataStructures(formData) {
-            // Clear existing data
-            summaryList.clear();
-            marksList.clear();
-            subjectsList.clear();
             
             // Add subjects to linked list
             selectedTemplate.subjects.forEach(subject => {
-                subjectsList.add(subject);
+                subjectsList.push(subject);
             });
             
             // Create summary object
@@ -426,12 +389,9 @@
                 student_count: formData.studentCount
             };
             
-            // Add summary to linked list
-            summaryList.add(currentSummary);
-            
             // Generate marks for each test and student
             currentMarks = [];
-            const subjects = subjectsList.toArray();
+            const subjects = subjectsList;
             
             for (let testNum = 1; testNum <= formData.testCount; testNum++) {
                 for (let studentIndex = 1; studentIndex <= formData.studentCount; studentIndex++) {
@@ -449,7 +409,6 @@
                     });
                     
                     currentMarks.push(marksObj);
-                    marksList.add(marksObj);
                 }
             }
         }
@@ -505,7 +464,7 @@
             const container = document.getElementById('marksTablesContainer');
             container.innerHTML = '';
             
-            const subjects = subjectsList.toArray();
+            const subjects = subjectsList;
             
             for (let testNum = 1; testNum <= currentSummary.test_count; testNum++) {
                 const tableDiv = document.createElement('div');
@@ -560,7 +519,7 @@
                 const payload = {
                     summary: currentSummary,
                     marks: currentMarks,
-                    subjects: subjectsList.toArray()
+                    subjects: subjectsList
                 };
                 
                 console.log('Sending payload to server:', payload);
@@ -617,11 +576,6 @@
         function resetForm() {
             summaryForm.reset();
             clearAllErrors();
-            
-            // Clear data structures
-            if (summaryList) summaryList.clear();
-            if (marksList) marksList.clear();
-            if (subjectsList) subjectsList.clear();
             
             currentSummary = null;
             currentMarks = [];
@@ -697,7 +651,6 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
-            initializeLinkedLists();
             loadTemplates();
             
             // Focus on year input
