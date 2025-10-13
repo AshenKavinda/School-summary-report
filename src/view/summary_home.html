@@ -307,12 +307,6 @@
             console.log('summaryData.length:', summaryData.length);
             console.log('subjectsData.length:', subjectsData.length);
             
-            if (summaryData.length === 0 && subjectsData.length === 0) {
-                console.log('No data found, showing empty state');
-                showEmptyState();
-                return;
-            }
-
             hideAllStates();
             
             // Check if filters are applied
@@ -327,39 +321,122 @@
                 test: testSelect.value
             });
             
+            // If no filters applied and no data, show empty state
+            if (!hasFilters && summaryData.length === 0 && subjectsData.length === 0) {
+                console.log('No filters and no data, showing empty state');
+                showEmptyState();
+                return;
+            }
+            
+            // Show summary data when not all filters are selected
             if (summaryData.length > 0 && !hasAllFilters) {
                 console.log('Displaying summary data');
-                // Show summary data when not all filters are selected
                 displaySummaryData();
                 summaryGrid.classList.remove('hidden');
             }
             
-            if (subjectsData.length > 0 && hasAllFilters) {
-                console.log('Displaying subjects data');
-                // Show subjects only when all filters are selected
-                displaySubjectsData();
-                subjectsGrid.classList.remove('hidden');
+            // Show subjects when all filters are selected
+            if (hasAllFilters) {
+                if (subjectsData.length > 0) {
+                    console.log('Displaying subjects data');
+                    displaySubjectsData();
+                    subjectsGrid.classList.remove('hidden');
+                } else {
+                    console.log('All filters selected but no subjects found');
+                    // Show message when all filters are selected but no subjects found
+                    showNoSubjectsMessage();
+                }
             } else if (hasFilters && !hasAllFilters) {
                 console.log('Showing filter message');
                 // Show message when some but not all filters are selected
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'text-center py-8';
-                messageDiv.innerHTML = `
-                    <div class="text-gray-500">
-                        <p class="text-lg">Please select Year, Class Name, and Test to view subjects</p>
-                        <p class="text-sm mt-2">All three filters are required to display subject cards</p>
-                    </div>
-                `;
-                
-                hideAllStates();
-                const main = document.querySelector('main');
-                const existingMessage = document.getElementById('filterMessage');
-                if (existingMessage) {
-                    existingMessage.remove();
-                }
-                messageDiv.id = 'filterMessage';
-                main.appendChild(messageDiv);
+                showFilterInstructions();
             }
+        }
+        
+        // Show message when no subjects are found for the selected filters
+        function showNoSubjectsMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'text-center py-12';
+            messageDiv.innerHTML = `
+                <div class="text-orange-500 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">No subjects found</h3>
+                <p class="mt-1 text-gray-500">No subject data available for the selected class and test combination.</p>
+                <p class="mt-2 text-sm text-gray-400">This might be because:</p>
+                <ul class="mt-2 text-sm text-gray-400 list-disc list-inside">
+                    <li>The class hasn't been set up with subjects yet</li>
+                    <li>No marks have been entered for this test</li>
+                    <li>There's a data synchronization issue</li>
+                </ul>
+                <div class="mt-6 space-x-4">
+                    <button 
+                        onclick="loadSummaryData()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                    >
+                        Retry
+                    </button>
+                    <button 
+                        onclick="redirectToInitialization()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                    >
+                        Initialize New Class
+                    </button>
+                </div>
+            `;
+            
+            const main = document.querySelector('main');
+            const existingMessage = document.getElementById('filterMessage');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            messageDiv.id = 'filterMessage';
+            main.appendChild(messageDiv);
+        }
+        
+        // Show instructions for completing filter selection
+        function showFilterInstructions() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'text-center py-8';
+            messageDiv.innerHTML = `
+                <div class="text-blue-500 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">Select All Filters to View Subjects</h3>
+                <p class="mt-1 text-gray-500">Please select Year, Class Name, and Test to view available subjects for marks management.</p>
+                <div class="mt-4 grid grid-cols-3 gap-4 max-w-md mx-auto">
+                    <div class="text-center">
+                        <div class="w-8 h-8 mx-auto mb-2 rounded-full ${yearSelect.value ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}">
+                            ${yearSelect.value ? '✓' : '1'}
+                        </div>
+                        <p class="text-xs ${yearSelect.value ? 'text-green-600' : 'text-gray-500'}">Year</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-8 h-8 mx-auto mb-2 rounded-full ${nameSelect.value ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}">
+                            ${nameSelect.value ? '✓' : '2'}
+                        </div>
+                        <p class="text-xs ${nameSelect.value ? 'text-green-600' : 'text-gray-500'}">Class</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-8 h-8 mx-auto mb-2 rounded-full ${testSelect.value ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}">
+                            ${testSelect.value ? '✓' : '3'}
+                        </div>
+                        <p class="text-xs ${testSelect.value ? 'text-green-600' : 'text-gray-500'}">Test</p>
+                    </div>
+                </div>
+            `;
+            
+            const main = document.querySelector('main');
+            const existingMessage = document.getElementById('filterMessage');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+            messageDiv.id = 'filterMessage';
+            main.appendChild(messageDiv);
         }
 
         // Display summary data

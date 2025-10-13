@@ -643,7 +643,7 @@
 
         // Utility functions
         function generateId() {
-            return 'sum_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            return 'SUM_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase();
         }
 
         function showFieldError(errorId, message) {

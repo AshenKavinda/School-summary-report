@@ -189,30 +189,75 @@ class SummaryInitModel {
                 summaries = await db.collection('summaries').find(query).toArray();
                 console.log(`Found ${summaries.length} summaries`);
                 
-                // Get subjects from marks collection for the filtered summaries
-                if (summaries.length > 0) {
-                    const summaryIds = summaries.map(s => s.id);
+                // Get subjects from marks collection
+                if (summaries.length > 0 || (filters.year && filters.name && filters.test)) {
+                    // First try to match with the exact summary IDs
+                    let marksQuery = {};
+                    let marksWithSubjects = [];
                     
-                    // If test filter is provided, filter by test number
-                    const marksQuery = { summary_id: { $in: summaryIds } };
-                    if (filters.test) {
-                        // Extract test number from test string (e.g., "Test 1" -> 1)
+                    if (summaries.length > 0) {
+                        const summaryIds = summaries.map(s => s.id);
+                        marksQuery.summary_id = { $in: summaryIds };
+                        
+                        if (filters.test) {
+                            // Extract test number from test string (e.g., "Test 1" -> 1)
+                            const testNum = filters.test.replace(/\D/g, '');
+                            if (testNum) {
+                                marksQuery.test_number = parseInt(testNum);
+                            }
+                        }
+                        
+                        console.log('Querying marks with summary IDs:', marksQuery);
+                        marksWithSubjects = await db.collection('marks')
+                            .find(marksQuery)
+                            .limit(1)
+                            .toArray();
+                    }
+                    
+                    // If no matching marks found with summary IDs, try a broader search
+                    // This handles cases where summary IDs don't match marks records exactly
+                    if (marksWithSubjects.length === 0 && filters.test) {
+                        console.log('No marks found for summary IDs, trying broader search...');
+                        
+                        const broadQuery = {};
                         const testNum = filters.test.replace(/\D/g, '');
                         if (testNum) {
-                            marksQuery.test_number = parseInt(testNum);
+                            broadQuery.test_number = parseInt(testNum);
+                        }
+                        
+                        console.log('Broader marks query:', broadQuery);
+                        marksWithSubjects = await db.collection('marks')
+                            .find(broadQuery)
+                            .limit(1)
+                            .toArray();
+                            
+                        if (marksWithSubjects.length > 0) {
+                            console.log('Found marks with broader search');
                         }
                     }
                     
-                    console.log('Querying marks with filters:', marksQuery);
-                    
-                    const marksWithSubjects = await db.collection('marks')
-                        .find(marksQuery)
-                        .limit(1)
-                        .toArray();
-                    
+                    // Extract subjects from found marks
                     if (marksWithSubjects.length > 0) {
                         subjects = Object.keys(marksWithSubjects[0].marks || {});
                         console.log('Found subjects:', subjects);
+                    } else if (filters.year && filters.name && filters.test) {
+                        // If all filters are provided but no marks found, provide fallback subjects
+                        // This ensures the UI still shows subject options
+                        console.log('Using fallback subjects for complete filter set');
+                        
+                        // Try to get any subjects from the marks collection
+                        const anyMarks = await db.collection('marks')
+                            .find({})
+                            .limit(1)
+                            .toArray();
+                            
+                        if (anyMarks.length > 0) {
+                            subjects = Object.keys(anyMarks[0].marks || {});
+                        } else {
+                            // Ultimate fallback
+                            subjects = ['Mathematics', 'Science', 'English', 'History'];
+                        }
+                        console.log('Using fallback subjects:', subjects);
                     }
                 }
             } else {
@@ -221,7 +266,7 @@ class SummaryInitModel {
                 if (filters.year || filters.name || filters.test) {
                     summaries = [
                         {
-                            id: 'sum_' + Date.now(),
+                            id: 'SUM_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9).toUpperCase(),
                             name: filters.name || 'Grade 10 A',
                             year: parseInt(filters.year) || 2024,
                             test_count: 3,
@@ -457,9 +502,19 @@ class SummaryInitModel {
                 return summaryResult;
             }
 
-            console.log('Summary created successfully, creating marks...');
-            // Create marks
-            const marksResult = await this.createMarks(marks);
+            console.log('Summary created successfully, updating marks with correct summary ID...');
+            
+            // Update all marks to use the actual summary ID from the database
+            const actualSummaryId = summaryResult.summary.id;
+            const updatedMarks = marks.map(mark => ({
+                ...mark,
+                summary_id: actualSummaryId
+            }));
+            
+            console.log(`Updated ${updatedMarks.length} marks records to use summary ID: ${actualSummaryId}`);
+            
+            // Create marks with correct summary ID
+            const marksResult = await this.createMarks(updatedMarks);
             if (!marksResult.success) {
                 console.log('Failed to create marks:', marksResult.error);
                 // In a real database implementation, you would rollback the summary creation here
