@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Subject Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/src/data_structures/d_linked_list.js"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .subject-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Create Subject Template</h1>
+                    <p class="mt-1 text-sm text-gray-500">Create a new template with multiple subjects</p>
+                </div>
+                <button 
+                    onclick="goBack()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    <span>Back</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <form id="templateForm" class="space-y-8">
+                <!-- Template Name -->
+                <div>
+                    <label for="templateName" class="block text-sm font-medium text-gray-700 mb-2">
+                        Template Name <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="templateName" 
+                        name="templateName"
+                        placeholder="Enter template name..."
+                        required
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                    <p id="nameError" class="text-red-500 text-sm mt-1 hidden"></p>
+                </div>
+
+                <!-- Subjects Section -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-4">
+                        Subjects <span class="text-red-500">*</span>
+                    </label>
+                    
+                    <!-- Add Subject Input -->
+                    <div class="flex space-x-3 mb-6">
+                        <input 
+                            type="text" 
+                            id="subjectInput" 
+                            placeholder="Enter subject name..."
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                        <button 
+                            type="button"
+                            id="addSubjectBtn"
+                            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Add</span>
+                        </button>
+                    </div>
+                    <p id="subjectError" class="text-red-500 text-sm mb-4 hidden"></p>
+
+                    <!-- Added Subjects Display -->
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">Added Subjects:</h3>
+                        <div id="subjectsContainer" class="space-y-2 mb-4">
+                            <p id="noSubjectsMessage" class="text-gray-500 text-sm italic">No subjects added yet</p>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            Total subjects: <span id="subjectCount" class="font-medium">0</span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-4 pt-6 border-t">
+                    <button 
+                        type="button"
+                        onclick="goBack()"
+                        class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-6 rounded-lg font-medium transition duration-200"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit"
+                        id="saveBtn"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition duration-200"
+                    >
+                        Save Template
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Saving Template</h3>
+                <p class="text-gray-500">Please wait while we save your template...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize linked list for subjects
+        let subjectsList;
+        let formSavedSuccessfully = false; // Flag to track successful saves
+        
+        // Initialize the linked list when the page loads
+        function initializeLinkedList() {
+            if (typeof DLinkedList !== 'undefined') {
+                subjectsList = new DLinkedList();
+            } else {
+                // Fallback if linked list class is not available
+                console.warn('DLinkedList not found, using array fallback');
+                subjectsList = {
+                    subjects: [],
+                    add: function(subject) {
+                        this.subjects.push(subject);
+                        return true;
+                    },
+                    remove: function(subject) {
+                        const index = this.subjects.indexOf(subject);
+                        if (index > -1) {
+                            this.subjects.splice(index, 1);
+                            return true;
+                        }
+                        return false;
+                    },
+                    toArray: function() {
+                        return [...this.subjects];
+                    },
+                    getSize: function() {
+                        return this.subjects.length;
+                    },
+                    contains: function(subject) {
+                        return this.subjects.includes(subject);
+                    },
+                    clear: function() {
+                        this.subjects = [];
+                    }
+                };
+            }
+        }
+
+        // DOM elements
+        const templateForm = document.getElementById('templateForm');
+        const templateNameInput = document.getElementById('templateName');
+        const subjectInput = document.getElementById('subjectInput');
+        const addSubjectBtn = document.getElementById('addSubjectBtn');
+        const subjectsContainer = document.getElementById('subjectsContainer');
+        const noSubjectsMessage = document.getElementById('noSubjectsMessage');
+        const subjectCount = document.getElementById('subjectCount');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadingModal = document.getElementById('loadingModal');
+        const nameError = document.getElementById('nameError');
+        const subjectError = document.getElementById('subjectError');
+
+        // Event listeners
+        templateForm.addEventListener('submit', handleSubmit);
+        addSubjectBtn.addEventListener('click', addSubject);
+        subjectInput.addEventListener('keypress', handleSubjectInputKeypress);
+        templateNameInput.addEventListener('input', clearNameError);
+        subjectInput.addEventListener('input', clearSubjectError);
+
+        // Add subject to linked list
+        function addSubject() {
+            const subjectName = subjectInput.value.trim();
+            
+            if (!subjectName) {
+                showSubjectError('Please enter a subject name');
+                return;
+            }
+
+            if (subjectsList.contains(subjectName)) {
+                showSubjectError('Subject already exists');
+                return;
+            }
+
+            // Add to linked list
+            subjectsList.add(subjectName);
+            
+            // Clear input
+            subjectInput.value = '';
+            clearSubjectError();
+            
+            // Update display
+            updateSubjectsDisplay();
+        }
+
+        // Remove subject from linked list
+        function removeSubject(subjectName) {
+            if (subjectsList.remove(subjectName)) {
+                updateSubjectsDisplay();
+            }
+        }
+
+        // Update subjects display from linked list
+        function updateSubjectsDisplay() {
+            const subjects = subjectsList.toArray();
+            const count = subjectsList.getSize();
+            
+            // Update count
+            subjectCount.textContent = count;
+            
+            if (count === 0) {
+                subjectsContainer.innerHTML = '<p id="noSubjectsMessage" class="text-gray-500 text-sm italic">No subjects added yet</p>';
+                return;
+            }
+
+            // Create subject items
+            let html = '';
+            subjects.forEach(subject => {
+                html += createSubjectItemHTML(subject);
+            });
+            
+            subjectsContainer.innerHTML = html;
+        }
+
+        // Create HTML for subject item
+        function createSubjectItemHTML(subject) {
+            const escapedSubject = escapeHtml(subject);
+            return `
+                <div class="subject-item flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border">
+                    <span class="text-gray-800 font-medium">${escapedSubject}</span>
+                    <button 
+                        type="button"
+                        onclick="removeSubject('${escapedSubject}')"
+                        class="text-red-500 hover:text-red-700 transition duration-200 p-1"
+                        title="Remove subject"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }
+
+        // Handle subject input keypress
+        function handleSubjectInputKeypress(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addSubject();
+            }
+        }
+
+        // Handle form submission
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const templateName = templateNameInput.value.trim();
+            const subjects = subjectsList.toArray();
+            
+            // Validation
+            let hasErrors = false;
+            
+            if (!templateName) {
+                showNameError('Template name is required');
+                hasErrors = true;
+            }
+            
+            if (subjects.length === 0) {
+                showSubjectError('At least one subject is required');
+                hasErrors = true;
+            }
+            
+            if (hasErrors) {
+                return;
+            }
+
+            // Prepare data
+            const templateData = {
+                name: templateName,
+                subjects: subjects
+            };
+
+            // Save template
+            await saveTemplate(templateData);
+        }
+
+        // Save template to database
+        async function saveTemplate(templateData) {
+            try {
+                showLoadingModal();
+                
+                const response = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(templateData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    hideLoadingModal();
+                    formSavedSuccessfully = true; // Set flag to avoid unload warning
+                    showNotification('Template created successfully!', 'success');
+                    
+                    // Reset the form to create a new template
+                    setTimeout(() => {
+                        resetForm();
+                        formSavedSuccessfully = false; // Reset flag after form reset
+                    }, 1500);
+                } else {
+                    hideLoadingModal();
+                    
+                    if (result.error.includes('already exists')) {
+                        showNameError(result.error);
+                    } else {
+                        showNotification(result.error || 'Failed to create template', 'error');
+                    }
+                }
+            } catch (error) {
+                hideLoadingModal();
+                console.error('Error saving template:', error);
+                showNotification('Network error. Please check your connection and try again.', 'error');
+            }
+        }
+
+        // Error handling functions
+        function showNameError(message) {
+            nameError.textContent = message;
+            nameError.classList.remove('hidden');
+            templateNameInput.classList.add('border-red-500');
+        }
+
+        function clearNameError() {
+            nameError.classList.add('hidden');
+            templateNameInput.classList.remove('border-red-500');
+        }
+
+        function showSubjectError(message) {
+            subjectError.textContent = message;
+            subjectError.classList.remove('hidden');
+            subjectInput.classList.add('border-red-500');
+        }
+
+        function clearSubjectError() {
+            subjectError.classList.add('hidden');
+            subjectInput.classList.remove('border-red-500');
+        }
+
+        // Modal functions
+        function showLoadingModal() {
+            loadingModal.classList.remove('hidden');
+            loadingModal.classList.add('flex');
+            saveBtn.disabled = true;
+        }
+
+        function hideLoadingModal() {
+            loadingModal.classList.add('hidden');
+            loadingModal.classList.remove('flex');
+            saveBtn.disabled = false;
+        }
+
+        // Navigation functions
+        function goBack() {
+            if (!formSavedSuccessfully && (subjectsList.getSize() > 0 || templateNameInput.value.trim())) {
+                if (confirm('Are you sure you want to leave? Your changes will be lost.')) {
+                    window.location.href = '/templates';
+                }
+            } else {
+                window.location.href = '/templates';
+            }
+        }
+
+        // Reset form function
+        function resetForm() {
+            // Clear all form inputs
+            templateNameInput.value = '';
+            subjectInput.value = '';
+            
+            // Clear linked list
+            subjectsList.clear();
+            
+            // Update display
+            updateSubjectsDisplay();
+            
+            // Clear any error messages
+            clearNameError();
+            clearSubjectError();
+            
+            // Focus on template name input
+            templateNameInput.focus();
+            
+            // Show success feedback
+            showNotification('Ready to create another template!', 'info');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            
+            let bgColor = 'bg-blue-500';
+            if (type === 'success') bgColor = 'bg-green-500';
+            else if (type === 'error') bgColor = 'bg-red-500';
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${bgColor}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Show success messages longer
+            const duration = type === 'success' ? 4000 : 3000;
+            setTimeout(() => {
+                notification.remove();
+            }, duration);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLinkedList();
+            
+            // Focus on template name input
+            templateNameInput.focus();
+        });
+
+        // Handle page unload warning
+        window.addEventListener('beforeunload', (e) => {
+            if (!formSavedSuccessfully && (subjectsList.getSize() > 0 || templateNameInput.value.trim())) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (!loadingModal.classList.contains('hidden')) {
+                    return; // Don't allow escape during loading
+                }
+                goBack();
+            }
+        });
+    </script>
+</body>
+</html>
