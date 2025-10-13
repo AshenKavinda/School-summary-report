@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject Templates</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .template-card {
+            transition: all 0.3s ease;
+        }
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Subject Templates</h1>
+                    <p class="mt-1 text-sm text-gray-500">Manage your subject template collections</p>
+                </div>
+                <button 
+                    id="createTemplateBtn"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Create Template</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Search Bar -->
+        <div class="mb-8">
+            <div class="relative max-w-md">
+                <input 
+                    type="text" 
+                    id="searchInput"
+                    placeholder="Search templates..." 
+                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading templates...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-12 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-900">No templates found</h3>
+            <p class="mt-1 text-gray-500">Get started by creating your first subject template.</p>
+            <button 
+                onclick="redirectToCreate()"
+                class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200"
+            >
+                Create Template
+            </button>
+        </div>
+
+        <!-- Templates Grid -->
+        <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+            <!-- Template cards will be dynamically inserted here -->
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="text-center py-12 hidden">
+            <div class="text-red-500 mb-4">
+                <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Error loading templates</h3>
+            <p class="mt-1 text-gray-500" id="errorMessage">Something went wrong. Please try again.</p>
+            <button 
+                onclick="loadTemplates()"
+                class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+                Retry
+            </button>
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 text-center mb-2">Delete Template</h3>
+            <p class="text-gray-500 text-center mb-6">Are you sure you want to delete this template? This action cannot be undone.</p>
+            <div class="flex space-x-3">
+                <button 
+                    id="cancelDeleteBtn"
+                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition duration-200"
+                >
+                    Cancel
+                </button>
+                <button 
+                    id="confirmDeleteBtn"
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition duration-200"
+                >
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let templates = [];
+        let templateToDelete = null;
+
+        // DOM elements
+        const createTemplateBtn = document.getElementById('createTemplateBtn');
+        const searchInput = document.getElementById('searchInput');
+        const loadingState = document.getElementById('loadingState');
+        const emptyState = document.getElementById('emptyState');
+        const templatesGrid = document.getElementById('templatesGrid');
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+        const deleteModal = document.getElementById('deleteModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        // Event listeners
+        createTemplateBtn.addEventListener('click', redirectToCreate);
+        searchInput.addEventListener('input', handleSearch);
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+        confirmDeleteBtn.addEventListener('click', handleDeleteConfirm);
+
+        // Redirect to create template page
+        function redirectToCreate() {
+            window.location.href = '/templates/create';
+        }
+
+        // Load templates from server
+        async function loadTemplates() {
+            showLoadingState();
+            
+            try {
+                const response = await fetch('/api/templates');
+                const data = await response.json();
+                
+                if (data.success) {
+                    templates = data.templates;
+                    displayTemplates(templates);
+                } else {
+                    showErrorState(data.error || 'Failed to load templates');
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+                showErrorState('Network error. Please check your connection.');
+            }
+        }
+
+        // Display templates in grid
+        function displayTemplates(templatesData) {
+            if (templatesData.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            templatesGrid.innerHTML = '';
+            templatesData.forEach(template => {
+                const templateCard = createTemplateCard(template);
+                templatesGrid.appendChild(templateCard);
+            });
+
+            showTemplatesGrid();
+        }
+
+        // Create template card HTML
+        function createTemplateCard(template) {
+            const card = document.createElement('div');
+            card.className = 'template-card bg-white rounded-lg shadow-md p-6 border border-gray-200 fade-in';
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900 truncate">${escapeHtml(template.name)}</h3>
+                    <button 
+                        onclick="showDeleteModal('${template.template_id}', '${escapeHtml(template.name)}')"
+                        class="text-red-500 hover:text-red-700 transition duration-200 p-1"
+                        title="Delete template"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-2">Subjects (${template.subjects.length}):</p>
+                    <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                        ${template.subjects.map(subject => 
+                            `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${escapeHtml(subject)}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                
+                <div class="text-xs text-gray-500">
+                    Created: ${new Date(template.createdAt).toLocaleDateString()}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Handle search functionality
+        function handleSearch() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                displayTemplates(templates);
+                return;
+            }
+            
+            const filteredTemplates = templates.filter(template => 
+                template.name.toLowerCase().includes(searchTerm) ||
+                template.subjects.some(subject => 
+                    subject.toLowerCase().includes(searchTerm)
+                )
+            );
+            
+            displayTemplates(filteredTemplates);
+        }
+
+        // Show delete confirmation modal
+        function showDeleteModal(templateId, templateName) {
+            templateToDelete = { id: templateId, name: templateName };
+            deleteModal.classList.remove('hidden');
+            deleteModal.classList.add('flex');
+        }
+
+        // Close delete modal
+        function closeDeleteModal() {
+            templateToDelete = null;
+            deleteModal.classList.add('hidden');
+            deleteModal.classList.remove('flex');
+        }
+
+        // Handle delete confirmation
+        async function handleDeleteConfirm() {
+            if (!templateToDelete) return;
+
+            try {
+                confirmDeleteBtn.disabled = true;
+                confirmDeleteBtn.innerHTML = 'Deleting...';
+
+                const response = await fetch(`/api/templates/${templateToDelete.id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Remove template from local array
+                    templates = templates.filter(t => t.template_id !== templateToDelete.id);
+                    
+                    // Refresh display
+                    displayTemplates(templates);
+                    
+                    closeDeleteModal();
+                    showNotification('Template deleted successfully', 'success');
+                } else {
+                    showNotification(data.error || 'Failed to delete template', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting template:', error);
+                showNotification('Network error. Please try again.', 'error');
+            } finally {
+                confirmDeleteBtn.disabled = false;
+                confirmDeleteBtn.innerHTML = 'Delete';
+            }
+        }
+
+        // State management functions
+        function showLoadingState() {
+            hideAllStates();
+            loadingState.classList.remove('hidden');
+        }
+
+        function showEmptyState() {
+            hideAllStates();
+            emptyState.classList.remove('hidden');
+        }
+
+        function showTemplatesGrid() {
+            hideAllStates();
+            templatesGrid.classList.remove('hidden');
+        }
+
+        function showErrorState(message) {
+            hideAllStates();
+            errorMessage.textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
+        function hideAllStates() {
+            loadingState.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            templatesGrid.classList.add('hidden');
+            errorState.classList.add('hidden');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTemplates();
+        });
+
+        // Handle escape key for modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !deleteModal.classList.contains('hidden')) {
+                closeDeleteModal();
+            }
+        });
+    </script>
+</body>
+</html>
