@@ -1,9 +1,12 @@
 const path = require('path');
 const { dbConnection } = require('../../model/db');
+const MarkManagerModel = require('../../model/mark_manager');
+const { DLinkedList } = require('../../data_structures/d_linked_list');
 
 class MarkManagerController {
     constructor() {
         this.db = null;
+        this.markManagerModel = new MarkManagerModel();
         this.initializeDatabase();
     }
 
@@ -51,13 +54,13 @@ class MarkManagerController {
     }
 
     /**
-     * Get marks data for specific parameters
+     * Get students data for LinkedList initialization
      * @param {Object} req - Request object
      * @param {Object} res - Response object
      */
-    async getMarksData(req, res) {
+    async getStudentsForLinkedList(req, res) {
         try {
-            console.log('Getting marks data with parameters:', req.query);
+            console.log('Getting students for LinkedList with parameters:', req.query);
             
             const { year, className, testNumber, subject } = req.query;
 
@@ -71,75 +74,191 @@ class MarkManagerController {
 
             console.log('Validated parameters:', { year, className, testNumber, subject });
 
-            // Get database connection
-            const db = await this.getDb();
-            
-            if (!db) {
-                console.warn('Database not available, returning mock data');
-                return this.getMockMarksData(req, res);
-            }
-
-            // Find summary that matches the criteria
-            const summary = await db.collection('summaries').findOne({
-                year: parseInt(year),
-                name: className
+            // Get students data from model
+            const result = await this.markManagerModel.getStudentsForMarking({
+                year, className, testNumber, subject
             });
 
-            if (!summary) {
-                console.log('No summary found for criteria:', { year: parseInt(year), name: className });
-                return res.status(404).json({
-                    success: false,
-                    error: 'No summary found for the specified year and class name'
-                });
+            if (!result.success) {
+                return res.status(404).json(result);
             }
 
-            console.log('Found summary:', summary.id);
-
-            // Find marks for the specific test and subject
-            const marks = await db.collection('marks').find({
-                summary_id: summary.id,
-                test_number: parseInt(testNumber)
-            }).toArray();
-
-            console.log(`Found ${marks.length} marks records`);
-
-            // Filter marks by subject and format for frontend
-            const subjectMarks = marks.map(mark => {
-                const subjectMark = mark.marks[subject];
-                return {
-                    id: mark.id,
-                    summary_id: mark.summary_id,
-                    test_number: mark.test_number,
-                    student_index: mark.index,
-                    student_name: `Student ${mark.index.toString().padStart(2, '0')}`, // Generate student name
-                    subject: subject,
-                    mark: subjectMark || 0,
-                    grade: this.calculateGrade(subjectMark || 0)
-                };
-            }).sort((a, b) => a.student_index - b.student_index);
-
-            console.log(`Returning ${subjectMarks.length} subject marks`);
+            console.log(`Returning ${result.students.length} students for LinkedList`);
 
             return res.status(200).json({
                 success: true,
-                marks: subjectMarks,
-                summary: {
-                    id: summary.id,
-                    name: summary.name,
-                    year: summary.year,
-                    test_count: summary.test_count,
-                    student_count: summary.student_count
-                },
-                filters: {
-                    year: parseInt(year),
-                    className: className,
-                    testNumber: parseInt(testNumber),
-                    subject: subject
-                }
+                students: result.students,
+                summary: result.summary,
+                filters: result.filters,
+                note: result.note || null
             });
 
         } catch (error) {
-            console.error('Controller error fetching marks data:', error.message);
+            console.error('Controller error fetching students for LinkedList:', error.message);
+            return res.status(500).json({
+                success: false,
+                error: 'Internal server error: ' + error.message
+            });
+        }
+    }
+
+    /**
+     * Save marks data in bulk from LinkedList
+     * @param {Object} req - Request object
+     * @param {Object} res - Response object
+     */
+    async saveMarksFromLinkedList(req, res) {
+        try {
+            console.log('Saving marks from LinkedList - received', req.body.marksData?.length || 0, 'records');
+
+            const { marksData, filters } = req.body;
+
+            // Validation
+            if (!marksData || !Array.isArray(marksData) || !filters) {
+                console.log('Validation failed: Invalid request data');
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid request data - missing marksData or filters'
+                });
+            }
+
+            const { year, className, testNumber, subject } = filters;
+
+            if (!year || !className || !testNumber || !subject) {
+                console.log('Validation failed: Missing filter parameters');
+                return res.status(400).json({
+                    success: false,
+                    error: 'Missing required filter parameters'
+                });
+            }
+
+            console.log('Processing marks for:', { year, className, testNumber, subject });
+
+            // Validate marks data
+            const validationErrors = [];
+            marksData.forEach((student, index) => {
+                if (!student.hasOwnProperty('index') || !student.hasOwnProperty('mark')) {
+                    validationErrors.push(`Student at position ${index}: missing index or mark`);
+                    return;
+                }
+
+                const markValidation = MarkManagerModel.validateMark(student.mark);
+                if (!markValidation.valid) {
+                    validationErrors.push(`Student ${student.index}: ${markValidation.error}`);
+                }
+            });
+
+            if (validationErrors.length > 0) {
+                console.log('Validation errors:', validationErrors);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Validation errors',
+                    details: validationErrors
+                });
+            }
+
+            // Save marks using model
+            const result = await this.markManagerModel.saveMarksInBulk(marksData, filters);
+
+            if (!result.success) {
+                return res.status(500).json(result);
+            }
+
+            console.log('Marks saved successfully:', result.updated_count + result.inserted_count, 'records');
+            return res.status(200).json({
+                success: true,
+                message: 'Marks saved successfully',
+                saved_count: marksData.length,
+                updated_count: result.updated_count,
+                inserted_count: result.inserted_count
+            });
+
+        } catch (error) {
+            console.error('Controller error saving marks from LinkedList:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'Internal server error: ' + error.message
+            });
+        }
+    }
+
+    /**
+     * Update a single student's mark
+     * @param {Object} req - Request object
+     * @param {Object} res - Response object
+     */
+    async updateSingleMark(req, res) {
+        try {
+            console.log('Updating single mark with data:', req.body);
+
+            const { studentData, filters } = req.body;
+
+            // Validation
+            if (!studentData || !filters) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Missing student data or filters'
+                });
+            }
+
+            const { year, className, testNumber, subject } = filters;
+
+            if (!year || !className || !testNumber || !subject) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Missing required filter parameters'
+                });
+            }
+
+            // Validate mark
+            const markValidation = MarkManagerModel.validateMark(studentData.mark);
+            if (!markValidation.valid) {
+                return res.status(400).json({
+                    success: false,
+                    error: markValidation.error
+                });
+            }
+
+            // Update mark using model
+            const result = await this.markManagerModel.updateSingleMark(studentData, filters);
+
+            return res.status(200).json(result);
+
+        } catch (error) {
+            console.error('Controller error updating single mark:', error.message);
+            return res.status(500).json({
+                success: false,
+                error: 'Internal server error: ' + error.message
+            });
+        }
+    }
+
+    /**
+     * Get marks statistics
+     * @param {Object} req - Request object
+     * @param {Object} res - Response object
+     */
+    async getMarksStatistics(req, res) {
+        try {
+            const { year, className, testNumber, subject } = req.query;
+
+            // Validation
+            if (!year || !className || !testNumber || !subject) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Missing required parameters: year, className, testNumber, subject'
+                });
+            }
+
+            // Get statistics from model
+            const result = await this.markManagerModel.getMarksStatistics({
+                year, className, testNumber, subject
+            });
+
+            return res.status(200).json(result);
+
+        } catch (error) {
+            console.error('Controller error getting marks statistics:', error.message);
             return res.status(500).json({
                 success: false,
                 error: 'Internal server error: ' + error.message

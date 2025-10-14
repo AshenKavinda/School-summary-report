@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marks Manager</title>
+    <title>Marks Manager - LinkedList Based</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <style>
@@ -15,7 +15,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .marks-table {
-            max-height: 600px;
+            max-height: 400px;
             overflow-y: auto;
         }
         .sticky-header {
@@ -23,6 +23,26 @@
             top: 0;
             background: white;
             z-index: 10;
+        }
+        .current-student {
+            border: 3px solid #3B82F6;
+            background: #EBF8FF;
+        }
+        .completed-student {
+            background: #F0FDF4;
+            border-left: 4px solid #10B981;
+        }
+        .pending-student {
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+        }
+        .mark-input {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -33,7 +53,7 @@
             <div class="flex justify-between items-center py-6">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Marks Manager</h1>
-                    <p class="mt-1 text-sm text-gray-500">Manage student marks and assessments</p>
+                    <p class="mt-1 text-sm text-gray-500">LinkedList-based marks entry system</p>
                 </div>
                 <button 
                     onclick="goBack()"
@@ -73,20 +93,27 @@
             </div>
         </div>
 
-        <!-- Debug Information (Temporary) -->
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8 fade-in">
-            <h3 class="text-lg font-medium text-yellow-800 mb-2">🐛 Debug Information (Temporary)</h3>
-            <div class="space-y-2 text-sm">
-                <div><strong>Raw URL Parameters:</strong> <span id="rawParams" class="font-mono bg-yellow-100 px-2 py-1 rounded"></span></div>
-                <div><strong>Parsed Parameters:</strong></div>
-                <div class="bg-yellow-100 p-3 rounded font-mono text-xs" id="parsedParams"></div>
+        <!-- Progress Section -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8 fade-in" id="progressSection">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Progress</h3>
+            <div class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Students Completed</span>
+                        <span id="progressText">0 / 0</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="progress-bar bg-blue-600 h-2 rounded-full" id="progressBar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="text-2xl font-bold text-blue-600" id="progressPercentage">0%</div>
             </div>
         </div>
 
         <!-- Loading State -->
         <div id="loadingState" class="text-center py-12">
             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p class="mt-2 text-gray-600">Loading marks data...</p>
+            <p class="mt-2 text-gray-600">Loading students data...</p>
         </div>
 
         <!-- Error State -->
@@ -96,32 +123,88 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
             </div>
-            <h3 class="text-lg font-medium text-gray-900">Error loading marks</h3>
+            <h3 class="text-lg font-medium text-gray-900">Error loading students</h3>
             <p class="mt-1 text-gray-500" id="errorMessage">Something went wrong. Please try again.</p>
             <button 
-                onclick="loadMarksData()"
+                onclick="loadStudentsData()"
                 class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
             >
                 Retry
             </button>
         </div>
 
-        <!-- Marks Table -->
-        <div id="marksContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+        <!-- Mark Entry Section -->
+        <div id="markEntrySection" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900">Enter Student Marks</h3>
+                <div class="text-sm text-gray-500">
+                    <span>Current: </span>
+                    <span id="currentPosition" class="font-medium">1</span>
+                    <span> of </span>
+                    <span id="totalStudents" class="font-medium">0</span>
+                </div>
+            </div>
+
+            <!-- Current Student Card -->
+            <div class="current-student rounded-lg p-6 mb-6">
+                <div class="text-center">
+                    <div class="text-sm text-gray-600 mb-2">Student Index</div>
+                    <div class="text-4xl font-bold text-blue-600 mb-4" id="currentStudentIndex">-</div>
+                    
+                    <div class="text-sm text-gray-600 mb-2">Enter Mark (0-100)</div>
+                    <input 
+                        type="number" 
+                        id="markInput" 
+                        class="mark-input w-32 h-16 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="0" 
+                        max="100" 
+                        placeholder="0"
+                        onkeypress="handleMarkInputKeypress(event)"
+                    >
+                    
+                    <div class="mt-4 space-x-4">
+                        <button 
+                            onclick="previousStudent()"
+                            id="prevButton"
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled
+                        >
+                            Previous
+                        </button>
+                        <button 
+                            onclick="nextStudent()"
+                            id="nextButton"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Helper -->
+            <div class="text-center text-sm text-gray-500">
+                <p>Use the Next button or press Enter to move to the next student</p>
+                <p>You can go back to edit previous entries using the Previous button</p>
+            </div>
+        </div>
+
+        <!-- LinkedList Display Table -->
+        <div id="marksTableContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
-                <h3 class="text-lg font-semibold text-gray-900">Student Marks</h3>
-                <p class="text-sm text-gray-600">Manage marks for the selected test and subject</p>
+                <h3 class="text-lg font-semibold text-gray-900">Students LinkedList View</h3>
+                <p class="text-sm text-gray-600">Current state of the LinkedList with student marks</p>
             </div>
             
             <div class="marks-table">
                 <table class="min-w-full">
                     <thead class="sticky-header bg-gray-50 border-b">
                         <tr>
-                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Student Index</th>
-                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Student Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Index</th>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Mark</th>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Grade</th>
-                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Actions</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Status</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Action</th>
                         </tr>
                     </thead>
                     <tbody id="marksTableBody">
@@ -129,29 +212,113 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Action Buttons -->
-            <div class="px-6 py-4 bg-gray-50 border-t">
-                <div class="flex justify-end space-x-4">
+        </div>
+
+        <!-- Save Section -->
+        <div id="saveSection" class="bg-white rounded-lg shadow-md p-6 mt-8 hidden">
+            <div class="text-center">
+                <div class="text-green-600 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">All Students Completed!</h3>
+                <p class="text-gray-600 mb-6">You have entered marks for all students. Click save to store the data in the database.</p>
+                
+                <div class="space-x-4">
                     <button 
                         onclick="saveAllMarks()"
-                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                        id="saveButton"
+                        class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition duration-200 text-lg"
                     >
-                        Save All Changes
+                        Save All Marks to Database
                     </button>
                     <button 
-                        onclick="exportMarks()"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                        onclick="reviewMarks()"
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition duration-200"
                     >
-                        Export to CSV
+                        Review & Edit
                     </button>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- LinkedList Implementation Script -->
     <script>
-        // Global variables for parameters
+        // Import LinkedList class (simulated)
+        class Node {
+            constructor(data) {
+                this.data = data;
+                this.next = null;
+            }
+        }
+
+        class DLinkedList {
+            constructor() {
+                this.head = null;
+                this.size = 0;
+            }
+
+            add(data) {
+                const newNode = new Node(data);
+                
+                if (!this.head) {
+                    this.head = newNode;
+                } else {
+                    let current = this.head;
+                    while (current.next) {
+                        current = current.next;
+                    }
+                    current.next = newNode;
+                }
+                this.size++;
+                return true;
+            }
+
+            get(index) {
+                if (index < 0 || index >= this.size) {
+                    return null;
+                }
+
+                let current = this.head;
+                for (let i = 0; i < index; i++) {
+                    current = current.next;
+                }
+
+                return current.data;
+            }
+
+            set(index, data) {
+                if (index < 0 || index >= this.size) {
+                    return false;
+                }
+
+                let current = this.head;
+                for (let i = 0; i < index; i++) {
+                    current = current.next;
+                }
+
+                current.data = data;
+                return true;
+            }
+
+            getSize() {
+                return this.size;
+            }
+
+            toArray() {
+                const array = [];
+                let current = this.head;
+                while (current) {
+                    array.push(current.data);
+                    current = current.next;
+                }
+                return array;
+            }
+        }
+
+        // Global variables
         let sessionParams = {
             year: null,
             className: null,
@@ -159,25 +326,21 @@
             subject: null
         };
         
-        let marksData = [];
+        let studentsLinkedList = new DLinkedList();
+        let currentStudentIndex = 0;
+        let totalStudents = 0;
+        let allMarksEntered = false;
 
         // Parse URL parameters
         function parseUrlParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Get all parameters
             sessionParams.year = urlParams.get('year');
             sessionParams.className = urlParams.get('className');
             sessionParams.testNumber = urlParams.get('testNumber');
             sessionParams.subject = urlParams.get('subject');
             
-            // Update debug information
-            document.getElementById('rawParams').textContent = window.location.search;
-            document.getElementById('parsedParams').textContent = JSON.stringify(sessionParams, null, 2);
-            
-            // Display parameters
             updateParameterDisplay();
-            
             console.log('Parsed URL Parameters:', sessionParams);
         }
 
@@ -202,8 +365,8 @@
             return true;
         }
 
-        // Load marks data from server
-        async function loadMarksData() {
+        // Load students data and populate LinkedList
+        async function loadStudentsData() {
             if (!validateParameters()) {
                 return;
             }
@@ -212,90 +375,185 @@
             
             try {
                 const params = new URLSearchParams(sessionParams);
-                const response = await fetch(`/api/marks/data?${params}`);
+                const response = await fetch(`/api/marks/students?${params}`);
                 const result = await response.json();
                 
                 if (result.success) {
-                    marksData = result.marks || [];
-                    displayMarksData();
+                    populateLinkedList(result.students);
+                    totalStudents = result.students.length;
+                    showMarkEntrySection();
+                    updateProgress();
                 } else {
-                    showError(result.error || 'Failed to load marks data');
+                    showError(result.error || 'Failed to load students data');
                 }
             } catch (error) {
-                console.error('Error loading marks:', error);
+                console.error('Error loading students:', error);
                 showError('Network error. Please check your connection.');
             }
         }
 
-        // Display marks data in table
-        function displayMarksData() {
-            const tableBody = document.getElementById('marksTableBody');
+        // Populate LinkedList with students data
+        function populateLinkedList(studentsData) {
+            studentsLinkedList = new DLinkedList();
             
-            if (marksData.length === 0) {
-                // Show placeholder data for now
-                const placeholderData = generatePlaceholderData();
-                displayPlaceholderMarks(placeholderData);
+            studentsData.forEach(student => {
+                studentsLinkedList.add({
+                    index: student.index,
+                    mark: student.mark,
+                    isCompleted: student.mark > 0 || student.isInitialized
+                });
+            });
+
+            console.log(`LinkedList populated with ${studentsLinkedList.getSize()} students`);
+            
+            // Find the first incomplete student
+            currentStudentIndex = 0;
+            for (let i = 0; i < studentsLinkedList.getSize(); i++) {
+                const student = studentsLinkedList.get(i);
+                if (!student.isCompleted) {
+                    currentStudentIndex = i;
+                    break;
+                }
+            }
+            
+            updateCurrentStudentDisplay();
+            updateLinkedListTable();
+        }
+
+        // Update current student display
+        function updateCurrentStudentDisplay() {
+            const currentStudent = studentsLinkedList.get(currentStudentIndex);
+            
+            if (currentStudent) {
+                document.getElementById('currentStudentIndex').textContent = currentStudent.index;
+                document.getElementById('markInput').value = currentStudent.mark || '';
+                document.getElementById('currentPosition').textContent = currentStudentIndex + 1;
+                document.getElementById('totalStudents').textContent = totalStudents;
+                
+                // Update navigation buttons
+                document.getElementById('prevButton').disabled = currentStudentIndex === 0;
+                
+                // Update focus to mark input
+                setTimeout(() => {
+                    document.getElementById('markInput').focus();
+                }, 100);
+            }
+        }
+
+        // Handle mark input keypress
+        function handleMarkInputKeypress(event) {
+            if (event.key === 'Enter') {
+                nextStudent();
+            }
+        }
+
+        // Move to next student
+        function nextStudent() {
+            const markInput = document.getElementById('markInput');
+            const mark = parseFloat(markInput.value);
+            
+            if (isNaN(mark) || mark < 0 || mark > 100) {
+                showNotification('Please enter a valid mark between 0 and 100', 'error');
+                return;
+            }
+            
+            // Update current student in LinkedList
+            const currentStudent = studentsLinkedList.get(currentStudentIndex);
+            currentStudent.mark = mark;
+            currentStudent.isCompleted = true;
+            studentsLinkedList.set(currentStudentIndex, currentStudent);
+            
+            // Move to next student
+            if (currentStudentIndex < totalStudents - 1) {
+                currentStudentIndex++;
+                updateCurrentStudentDisplay();
+                updateProgress();
+                updateLinkedListTable();
             } else {
-                // Display real data
-                tableBody.innerHTML = '';
-                marksData.forEach((mark, index) => {
-                    const row = createMarkRow(mark, index);
-                    tableBody.appendChild(row);
-                });
+                // All students completed
+                allMarksEntered = true;
+                showSaveSection();
+                updateProgress();
+                updateLinkedListTable();
             }
-            
-            showMarksContainer();
         }
 
-        // Generate placeholder data for demonstration
-        function generatePlaceholderData() {
-            const data = [];
-            const studentCount = 25; // Default student count
-            
-            for (let i = 1; i <= studentCount; i++) {
-                data.push({
-                    index: i,
-                    studentName: `Student ${i.toString().padStart(2, '0')}`,
-                    mark: Math.floor(Math.random() * 41) + 60, // Random mark between 60-100
-                    grade: 'A' // Will be calculated
-                });
+        // Move to previous student
+        function previousStudent() {
+            if (currentStudentIndex > 0) {
+                currentStudentIndex--;
+                updateCurrentStudentDisplay();
+                updateProgress();
             }
-            
-            return data;
         }
 
-        // Display placeholder marks
-        function displayPlaceholderMarks(data) {
+        // Update progress display
+        function updateProgress() {
+            let completedCount = 0;
+            for (let i = 0; i < studentsLinkedList.getSize(); i++) {
+                const student = studentsLinkedList.get(i);
+                if (student.isCompleted) {
+                    completedCount++;
+                }
+            }
+            
+            const percentage = totalStudents > 0 ? (completedCount / totalStudents) * 100 : 0;
+            
+            document.getElementById('progressText').textContent = `${completedCount} / ${totalStudents}`;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+            document.getElementById('progressPercentage').textContent = `${Math.round(percentage)}%`;
+        }
+
+        // Update LinkedList table display
+        function updateLinkedListTable() {
             const tableBody = document.getElementById('marksTableBody');
             tableBody.innerHTML = '';
             
-            data.forEach((student, index) => {
-                const grade = calculateGrade(student.mark);
+            const studentsArray = studentsLinkedList.toArray();
+            
+            studentsArray.forEach((student, index) => {
                 const row = document.createElement('tr');
-                row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                // Apply different styles based on status
+                let rowClass = 'bg-white';
+                let statusText = 'Pending';
+                let statusClass = 'bg-yellow-100 text-yellow-800';
+                
+                if (student.isCompleted) {
+                    rowClass = 'completed-student';
+                    statusText = 'Completed';
+                    statusClass = 'bg-green-100 text-green-800';
+                } else if (index === currentStudentIndex) {
+                    rowClass = 'current-student';
+                    statusText = 'Current';
+                    statusClass = 'bg-blue-100 text-blue-800';
+                } else {
+                    rowClass = 'pending-student';
+                }
+                
+                row.className = rowClass;
+                
+                const grade = student.mark > 0 ? calculateGrade(student.mark) : '-';
+                const gradeClass = student.mark > 0 ? getGradeColor(grade) : 'bg-gray-100 text-gray-500';
                 
                 row.innerHTML = `
                     <td class="px-6 py-4 text-sm font-medium text-gray-900">${student.index}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">${student.studentName}</td>
+                    <td class="px-6 py-4 text-sm font-bold text-gray-900">${student.mark || '-'}</td>
                     <td class="px-6 py-4">
-                        <input 
-                            type="number" 
-                            value="${student.mark}" 
-                            min="0" 
-                            max="100" 
-                            class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            onchange="updateGrade(this, ${index})"
-                        >
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${gradeClass}">
+                            ${grade}
+                        </span>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="grade-display inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor(grade)}">
-                            ${grade}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                            ${statusText}
                         </span>
                     </td>
                     <td class="px-6 py-4">
                         <button 
                             onclick="editStudent(${index})"
                             class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            ${!student.isCompleted ? 'disabled' : ''}
                         >
                             Edit
                         </button>
@@ -304,6 +562,22 @@
                 
                 tableBody.appendChild(row);
             });
+            
+            // Show table if it has content
+            document.getElementById('marksTableContainer').classList.remove('hidden');
+        }
+
+        // Edit specific student
+        function editStudent(index) {
+            currentStudentIndex = index;
+            allMarksEntered = false;
+            
+            // Hide save section and show mark entry
+            document.getElementById('saveSection').classList.add('hidden');
+            document.getElementById('markEntrySection').classList.remove('hidden');
+            
+            updateCurrentStudentDisplay();
+            updateLinkedListTable();
         }
 
         // Calculate grade based on mark
@@ -328,29 +602,60 @@
             return 'bg-red-100 text-red-800';
         }
 
-        // Update grade when mark changes
-        function updateGrade(input, index) {
-            const mark = parseInt(input.value);
-            const grade = calculateGrade(mark);
-            const gradeDisplay = input.closest('tr').querySelector('.grade-display');
+        // Save all marks to database
+        async function saveAllMarks() {
+            try {
+                document.getElementById('saveButton').disabled = true;
+                document.getElementById('saveButton').textContent = 'Saving...';
+                
+                const marksArray = studentsLinkedList.toArray();
+                
+                const requestData = {
+                    marksData: marksArray,
+                    filters: sessionParams
+                };
+                
+                const response = await fetch('/api/marks/save-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Marks saved successfully!', 'success');
+                    showNotification(`Saved ${result.saved_count} student marks to database`, 'info');
+                    // Optionally redirect back to summary page
+                    setTimeout(() => {
+                        goBack();
+                    }, 3000);
+                } else {
+                    showNotification('Failed to save marks: ' + result.error, 'error');
+                    console.error('Save error details:', result);
+                }
+                
+            } catch (error) {
+                console.error('Error saving marks:', error);
+                showNotification('Network error while saving marks: ' + error.message, 'error');
+            } finally {
+                document.getElementById('saveButton').disabled = false;
+                document.getElementById('saveButton').textContent = 'Save All Marks to Database';
+            }
+        }
+
+        // Review marks (go back to editing)
+        function reviewMarks() {
+            currentStudentIndex = 0;
+            allMarksEntered = false;
             
-            gradeDisplay.textContent = grade;
-            gradeDisplay.className = `grade-display inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getGradeColor(grade)}`;
-        }
-
-        // Edit student (placeholder function)
-        function editStudent(index) {
-            showNotification('Edit student functionality will be implemented', 'info');
-        }
-
-        // Save all marks (placeholder function)
-        function saveAllMarks() {
-            showNotification('Save functionality will be implemented', 'info');
-        }
-
-        // Export marks (placeholder function)
-        function exportMarks() {
-            showNotification('Export functionality will be implemented', 'info');
+            document.getElementById('saveSection').classList.add('hidden');
+            document.getElementById('markEntrySection').classList.remove('hidden');
+            
+            updateCurrentStudentDisplay();
+            updateLinkedListTable();
         }
 
         // State management functions
@@ -365,15 +670,22 @@
             document.getElementById('errorState').classList.remove('hidden');
         }
 
-        function showMarksContainer() {
+        function showMarkEntrySection() {
             hideAllStates();
-            document.getElementById('marksContainer').classList.remove('hidden');
+            document.getElementById('progressSection').classList.remove('hidden');
+            document.getElementById('markEntrySection').classList.remove('hidden');
+        }
+
+        function showSaveSection() {
+            document.getElementById('markEntrySection').classList.add('hidden');
+            document.getElementById('saveSection').classList.remove('hidden');
         }
 
         function hideAllStates() {
             document.getElementById('loadingState').classList.add('hidden');
             document.getElementById('errorState').classList.add('hidden');
-            document.getElementById('marksContainer').classList.add('hidden');
+            document.getElementById('markEntrySection').classList.add('hidden');
+            document.getElementById('saveSection').classList.add('hidden');
         }
 
         // Go back to summary page
@@ -401,7 +713,7 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
             parseUrlParameters();
-            loadMarksData();
+            loadStudentsData();
         });
     </script>
 </body>
