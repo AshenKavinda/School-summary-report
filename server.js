@@ -61,11 +61,17 @@ app.get('/api/summary/:id', (req, res) => summaryInitController.getSummaryById(r
 app.get('/api/summary/:summaryId/marks', (req, res) => summaryInitController.getMarksBySummary(req, res));
 app.delete('/api/summary/:id', (req, res) => summaryInitController.deleteSummary(req, res));
 
-// API Routes for Marks Manager
+// API Routes for Marks Manager (LinkedList-based)
+app.get('/api/marks/students', (req, res) => markManagerController.getStudentsForLinkedList(req, res));
+app.post('/api/marks/save-bulk', (req, res) => markManagerController.saveMarksFromLinkedList(req, res));
+app.put('/api/marks/single', (req, res) => markManagerController.updateSingleMark(req, res));
+app.get('/api/marks/statistics', (req, res) => markManagerController.getMarksStatistics(req, res));
+
+// Legacy API Routes for Marks Manager (keeping for backward compatibility)
 app.get('/api/marks/:summaryId/:subject/:testNumber', (req, res) => markManagerController.getMarksData(req, res));
 app.put('/api/marks', (req, res) => markManagerController.updateMarks(req, res));
 app.get('/api/marks/:summaryId/:subject/:testNumber/export', (req, res) => markManagerController.exportMarks(req, res));
-app.get('/api/marks/:summaryId/:subject/:testNumber/statistics', (req, res) => markManagerController.getStatistics(req, res));
+app.get('/api/marks/:summaryId/:subject/:testNumber/statistics', (req, res) => markManagerController.getMarksStatistics(req, res));
 
 // Page Routes
 app.get('/templates', (req, res) => {
@@ -84,10 +90,8 @@ app.get('/summary/details/:id', (req, res) => {
     res.json({ message: 'Summary details page not implemented yet' });
 });
 
-// Marks Manager Route (placeholder)
-app.get('/marks_manager', (req, res) => {
-    res.sendFile(path.join(__dirname, 'src/view/marks_manager.html'));
-});
+// Marks Manager Route
+app.get('/marks_manager', (req, res) => markManagerController.renderMarksManager(req, res));
 
 // Route to serve index.html
 app.get('/', (req, res) => {
