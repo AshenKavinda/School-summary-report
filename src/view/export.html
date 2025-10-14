@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Summary Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .test-card {
+            transition: all 0.3s ease;
+        }
+        .test-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .marks-table {
+            font-size: 0.875rem;
+        }
+        .marks-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            text-align: center;
+            padding: 0.75rem 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .marks-table td {
+            text-align: center;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .average-row {
+            background-color: #f1f5f9;
+            font-weight: 600;
+        }
+        .print-hide {
+            display: block;
+        }
+        @media print {
+            .print-hide {
+                display: none !important;
+            }
+            .test-card {
+                page-break-inside: avoid;
+                margin-bottom: 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b print-hide">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center space-x-4">
+                    <button 
+                        onclick="goBack()"
+                        class="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                    >
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Export Summary Report</h1>
+                        <p class="text-gray-600" id="summaryTitle">Loading summary information...</p>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button 
+                        onclick="exportToExcel()"
+                        id="exportBtn"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        <i class="fas fa-file-excel mr-2"></i>
+                        Export to Excel
+                    </button>
+                    <button 
+                        onclick="printReport()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                        <i class="fas fa-print mr-2"></i>
+                        Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading export data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="text-center py-12 hidden">
+            <div class="text-red-500 mb-4">
+                <i class="fas fa-exclamation-triangle text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Error loading data</h3>
+            <p class="mt-1 text-gray-500" id="errorMessage">Something went wrong. Please try again.</p>
+            <button 
+                onclick="loadExportData()"
+                class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200"
+            >
+                <i class="fas fa-redo mr-2"></i>
+                Retry
+            </button>
+        </div>
+
+        <!-- Export Content -->
+        <div id="exportContent" class="hidden">
+            <!-- Summary Information -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Summary Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-blue-600">Class Name</h3>
+                        <p class="text-lg font-semibold text-blue-900" id="className">-</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-green-600">Year</h3>
+                        <p class="text-lg font-semibold text-green-900" id="year">-</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-purple-600">Total Tests</h3>
+                        <p class="text-lg font-semibold text-purple-900" id="totalTests">-</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h3 class="text-sm font-medium text-orange-600">Total Students</h3>
+                        <p class="text-lg font-semibold text-orange-900" id="totalStudents">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Results -->
+            <div id="testResults">
+                <!-- Test cards will be dynamically generated here -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let summaryId = null;
+        let exportData = null;
+
+        // DOM elements
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const exportContent = document.getElementById('exportContent');
+        const errorMessage = document.getElementById('errorMessage');
+        const summaryTitle = document.getElementById('summaryTitle');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get summary ID from URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            summaryId = urlParams.get('summaryId');
+            
+            if (!summaryId) {
+                showError('No summary ID provided');
+                return;
+            }
+            
+            loadExportData();
+        });
+
+        // Load export data from server
+        async function loadExportData() {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/api/export/data/${summaryId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    exportData = data;
+                    displayExportData();
+                } else {
+                    showError(data.error || 'Failed to load export data');
+                }
+            } catch (error) {
+                console.error('Error loading export data:', error);
+                showError('Network error. Please check your connection and try again.');
+            }
+        }
+
+        // Display the loaded export data
+        function displayExportData() {
+            hideAllStates();
+            exportContent.classList.remove('hidden');
+            
+            const summary = exportData.summary;
+            
+            // Update header
+            summaryTitle.textContent = `${summary.name} - ${summary.year}`;
+            
+            // Update summary information
+            document.getElementById('className').textContent = summary.name;
+            document.getElementById('year').textContent = summary.year;
+            document.getElementById('totalTests').textContent = summary.test_count;
+            document.getElementById('totalStudents').textContent = summary.student_count;
+            
+            // Display test results
+            displayTestResults();
+            
+            // Enable export button
+            exportBtn.disabled = false;
+        }
+
+        // Display test results
+        function displayTestResults() {
+            const testResults = document.getElementById('testResults');
+            testResults.innerHTML = '';
+            
+            const testData = exportData.testData;
+            
+            // Sort tests by test number
+            const sortedTests = Object.keys(testData).sort((a, b) => parseInt(a) - parseInt(b));
+            
+            sortedTests.forEach(testNum => {
+                const test = testData[testNum];
+                if (test.students && test.students.length > 0) {
+                    const testCard = createTestCard(test);
+                    testResults.appendChild(testCard);
+                }
+            });
+            
+            if (testResults.children.length === 0) {
+                testResults.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-gray-400 mb-4">
+                            <i class="fas fa-chart-bar text-4xl"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900">No test data found</h3>
+                        <p class="text-gray-500">No marks have been recorded for this summary yet.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Create test card HTML
+        function createTestCard(test) {
+            const card = document.createElement('div');
+            card.className = 'test-card bg-white rounded-lg shadow-md p-6 mb-8 fade-in';
+            
+            // Create table HTML
+            let tableHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-900">Test ${test.testNumber}</h3>
+                    <span class="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+                        ${test.students.length} student${test.students.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="marks-table w-full border-collapse">
+                        <thead>
+                            <tr>
+                                <th class="w-20">Student ID</th>
+            `;
+            
+            // Add subject headers
+            test.subjects.forEach(subject => {
+                tableHTML += `<th class="w-20">${escapeHtml(subject)}</th>`;
+            });
+            
+            tableHTML += `
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            // Add student rows
+            test.students.forEach((student, index) => {
+                tableHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                `;
+                
+                test.subjects.forEach(subject => {
+                    const mark = student.marks[subject];
+                    const displayMark = mark !== null && mark !== undefined ? mark : '-';
+                    tableHTML += `<td>${displayMark}</td>`;
+                });
+                
+                tableHTML += `</tr>`;
+            });
+            
+            // Add average row
+            if (test.subjects.length > 0) {
+                tableHTML += `
+                    <tr class="average-row">
+                        <td><strong>AVERAGE</strong></td>
+                `;
+                
+                test.subjects.forEach(subject => {
+                    const avg = test.averages[subject] || 0;
+                    tableHTML += `<td><strong>${avg}</strong></td>`;
+                });
+                
+                tableHTML += `</tr>`;
+            }
+            
+            tableHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            card.innerHTML = tableHTML;
+            return card;
+        }
+
+        // Export to Excel
+        async function exportToExcel() {
+            try {
+                exportBtn.disabled = true;
+                exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
+                
+                const response = await fetch(`/api/export/excel/${summaryId}`);
+                
+                if (response.ok) {
+                    // Create blob and download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${exportData.summary.name}_${exportData.summary.year}_Summary_Report.xlsx`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showNotification('Excel file exported successfully!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showNotification(errorData.error || 'Failed to export Excel file', 'error');
+                }
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                showNotification('Failed to export Excel file', 'error');
+            } finally {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<i class="fas fa-file-excel mr-2"></i>Export to Excel';
+            }
+        }
+
+        // Print report
+        function printReport() {
+            window.print();
+        }
+
+        // Go back to previous page
+        function goBack() {
+            window.history.back();
+        }
+
+        // State management functions
+        function showLoading() {
+            hideAllStates();
+            loadingState.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            hideAllStates();
+            errorMessage.textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
+        function hideAllStates() {
+            loadingState.classList.add('hidden');
+            errorState.classList.add('hidden');
+            exportContent.classList.add('hidden');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = text.toString();
+            return div.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            
+            // Determine notification color based on type
+            let bgColor = 'bg-blue-500'; // default
+            if (type === 'success') {
+                bgColor = 'bg-green-500';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-500';
+            }
+            
+            // Determine icon based on type
+            let iconClass = 'fa-info'; // default
+            if (type === 'success') {
+                iconClass = 'fa-check';
+            } else if (type === 'error') {
+                iconClass = 'fa-times';
+            }
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${bgColor}`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${iconClass} mr-2"></i>
+                    ${message}
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
