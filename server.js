@@ -7,6 +7,7 @@ require('dotenv').config();
 const SubjectTemplateController = require('./src/controller/subject_service/subject_tem');
 const SummaryInitController = require('./src/controller/initialization_report_home/summary_init');
 const MarkManagerController = require('./src/controller/subject_manager_service/mark_manager');
+const ExportController = require('./src/controller/report_service/export');
 const { dbConnection } = require('./src/model/db');
 
 const app = express();
@@ -67,6 +68,10 @@ app.post('/api/marks/save-bulk', (req, res) => markManagerController.saveMarksFr
 app.put('/api/marks/single', (req, res) => markManagerController.updateSingleMark(req, res));
 app.get('/api/marks/statistics', (req, res) => markManagerController.getMarksStatistics(req, res));
 
+// API Routes for Export
+app.get('/api/export/data/:summaryId', (req, res) => ExportController.getExportData(req, res));
+app.get('/api/export/excel/:summaryId', (req, res) => ExportController.exportToExcel(req, res));
+
 // Legacy API Routes for Marks Manager (keeping for backward compatibility)
 app.get('/api/marks/:summaryId/:subject/:testNumber', (req, res) => markManagerController.getMarksData(req, res));
 app.put('/api/marks', (req, res) => markManagerController.updateMarks(req, res));
@@ -92,6 +97,9 @@ app.get('/summary/details/:id', (req, res) => {
 
 // Marks Manager Route
 app.get('/marks_manager', (req, res) => markManagerController.renderMarksManager(req, res));
+
+// Export Route
+app.get('/export', (req, res) => ExportController.getExportPage(req, res));
 
 // Route to serve index.html
 app.get('/', (req, res) => {
