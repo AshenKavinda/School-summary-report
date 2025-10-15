@@ -32,15 +32,26 @@
                     <h1 class="text-3xl font-bold text-gray-900">Summary Report Manager</h1>
                     <p class="mt-1 text-sm text-gray-500">Manage class summary reports and marks</p>
                 </div>
-                <button 
-                    id="initializationBtn"
-                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
-                >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
-                    </svg>
-                    <span>Initialize Summary</span>
-                </button>
+                <div class="flex items-center space-x-3">
+                    <button 
+                        onclick="goHome()"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center space-x-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                        <span>Home</span>
+                    </button>
+                    <button 
+                        id="initializationBtn"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                        </svg>
+                        <span>Initialize Summary</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -181,6 +192,11 @@
         // Redirect to initialization page
         function redirectToInitialization() {
             window.location.href = '/summary/initialization';
+        }
+
+        // Redirect to homepage
+        function goHome() {
+            window.location.href = '/';
         }
 
         // Load initial data
@@ -476,12 +492,23 @@
                     ID: ${summary.id}
                 </div>
                 
-                <button 
-                    onclick="viewSummaryDetails('${summary.id}')"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
-                >
-                    View Details
-                </button>
+                <div class="space-y-2">
+                    <button 
+                        onclick="viewSummaryDetails('${summary.id}')"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200"
+                    >
+                        View Details
+                    </button>
+                    <button 
+                        onclick="confirmDeleteSummary('${summary.id}', '${escapeHtml(summary.name)}', '${summary.year}')"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200 flex items-center justify-center space-x-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <span>Delete Report</span>
+                    </button>
+                </div>
             `;
             
             return card;
@@ -580,6 +607,117 @@
             window.location.href = `/export?summaryId=${summaryId}`;
         }
 
+        // Confirm delete summary with modal dialog
+        function confirmDeleteSummary(summaryId, summaryName, summaryYear) {
+            // Create modal backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50';
+            backdrop.id = 'delete-modal-backdrop';
+            
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.className = 'relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white';
+            
+            modal.innerHTML = `
+                <div class="mt-3 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mt-4">Delete Summary Report</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p class="text-sm text-gray-500">
+                            Are you sure you want to delete the summary report for 
+                            <strong>${escapeHtml(summaryName)}</strong> (${summaryYear})?
+                        </p>
+                        <p class="text-sm text-red-600 mt-2">
+                            This will permanently delete all marks data and cannot be undone.
+                        </p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <div class="flex space-x-4">
+                            <button 
+                                id="cancel-delete"
+                                class="flex-1 px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                id="confirm-delete"
+                                class="flex-1 px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            backdrop.appendChild(modal);
+            document.body.appendChild(backdrop);
+            
+            // Add event listeners
+            const cancelBtn = modal.querySelector('#cancel-delete');
+            const confirmBtn = modal.querySelector('#confirm-delete');
+            
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(backdrop);
+            });
+            
+            confirmBtn.addEventListener('click', () => {
+                document.body.removeChild(backdrop);
+                deleteSummary(summaryId, summaryName);
+            });
+            
+            // Close modal when clicking outside
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) {
+                    document.body.removeChild(backdrop);
+                }
+            });
+        }
+
+        // Delete summary report
+        async function deleteSummary(summaryId, summaryName) {
+            try {
+                // Show loading state
+                showNotification('Deleting summary report...', 'info');
+                
+                // Make delete request
+                const response = await fetch(`/api/summary/${summaryId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(
+                        `Summary report "${summaryName}" deleted successfully`, 
+                        'success'
+                    );
+                    
+                    // Reload the data to refresh the display
+                    await loadSummaryData();
+                } else {
+                    showNotification(
+                        `Failed to delete summary: ${result.error}`, 
+                        'error'
+                    );
+                }
+                
+            } catch (error) {
+                console.error('Error deleting summary:', error);
+                showNotification(
+                    'Network error occurred while deleting summary', 
+                    'error'
+                );
+            }
+        }
+
         // State management functions
         function showLoadingState() {
             hideAllStates();
@@ -620,10 +758,15 @@
 
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
-                type === 'success' ? 'bg-green-500' : 
-                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            }`;
+            let bgColor = 'bg-blue-500';
+            
+            if (type === 'success') {
+                bgColor = 'bg-green-500';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-500';
+            }
+            
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${bgColor}`;
             notification.textContent = message;
             
             document.body.appendChild(notification);

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selection Sort Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/src/data_structures/selection_sort.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Selection Sort Algorithm Test</h1>
+        
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Student Marks Sorting</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <button 
+                    onclick="generateRandomData()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
+                >
+                    Generate Random Data
+                </button>
+                <button 
+                    onclick="sortAscending()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium"
+                >
+                    Sort Ascending
+                </button>
+                <button 
+                    onclick="sortDescending()"
+                    class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded font-medium"
+                >
+                    Sort Descending
+                </button>
+            </div>
+            
+            <div id="status" class="text-center text-sm text-gray-600 mb-4">
+                Click "Generate Random Data" to start
+            </div>
+        </div>
+        
+        <!-- Data Display -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h3 class="text-lg font-semibold">Student Data</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Student ID</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Math Mark</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Grade</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTable">
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                No data available. Click "Generate Random Data" to start.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Statistics -->
+        <div id="statistics" class="bg-white rounded-lg shadow-md p-6 mt-6 hidden">
+            <h3 class="text-lg font-semibold mb-4">Sorting Statistics</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50 p-3 rounded">
+                    <div class="text-sm text-blue-600">Array Size</div>
+                    <div class="text-lg font-bold text-blue-900" id="statSize">-</div>
+                </div>
+                <div class="bg-green-50 p-3 rounded">
+                    <div class="text-sm text-green-600">Comparisons</div>
+                    <div class="text-lg font-bold text-green-900" id="statComparisons">-</div>
+                </div>
+                <div class="bg-orange-50 p-3 rounded">
+                    <div class="text-sm text-orange-600">Swaps</div>
+                    <div class="text-lg font-bold text-orange-900" id="statSwaps">-</div>
+                </div>
+                <div class="bg-purple-50 p-3 rounded">
+                    <div class="text-sm text-purple-600">Algorithm</div>
+                    <div class="text-lg font-bold text-purple-900" id="statAlgorithm">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let studentsData = [];
+        
+        // Check if SelectionSort is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const status = document.getElementById('status');
+            if (typeof SelectionSort !== 'undefined') {
+                console.log('✅ SelectionSort class loaded successfully');
+                status.innerHTML = '<span class="text-green-600">✅ Selection Sort algorithm loaded! Click "Generate Random Data" to start.</span>';
+            } else {
+                console.error('❌ SelectionSort class not found');
+                status.innerHTML = '<span class="text-red-600">❌ Selection Sort algorithm not loaded. Please refresh the page.</span>';
+            }
+        });
+        
+        // Generate random student data
+        function generateRandomData() {
+            const names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry', 'Ivy', 'Jack'];
+            studentsData = [];
+            
+            for (let i = 0; i < 10; i++) {
+                studentsData.push({
+                    index: i + 1,
+                    name: names[i],
+                    mark: Math.floor(Math.random() * 41) + 60, // Marks between 60-100
+                    originalPosition: i
+                });
+            }
+            
+            displayData(studentsData);
+            updateStatus('Random data generated. Ready to sort!');
+            hideStatistics();
+        }
+        
+        // Sort ascending
+        function sortAscending() {
+            if (studentsData.length === 0) {
+                updateStatus('No data to sort. Generate data first.', 'error');
+                return;
+            }
+            
+            if (typeof SelectionSort === 'undefined') {
+                updateStatus('SelectionSort not available!', 'error');
+                return;
+            }
+            
+            updateStatus('Sorting in ascending order...', 'info');
+            
+            try {
+                const originalMarks = studentsData.map(s => s.mark);
+                const sortedData = SelectionSort.sortStudentsByMarks(studentsData, 'mark', true);
+                const sortedMarks = sortedData.map(s => s.mark);
+                const stats = SelectionSort.getSortingStats(originalMarks, sortedMarks);
+                
+                displayData(sortedData);
+                displayStatistics(stats);
+                updateStatus(`✅ Sorted ${sortedData.length} students in ascending order`, 'success');
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Sorting error:', error);
+            }
+        }
+        
+        // Sort descending
+        function sortDescending() {
+            if (studentsData.length === 0) {
+                updateStatus('No data to sort. Generate data first.', 'error');
+                return;
+            }
+            
+            if (typeof SelectionSort === 'undefined') {
+                updateStatus('SelectionSort not available!', 'error');
+                return;
+            }
+            
+            updateStatus('Sorting in descending order...', 'info');
+            
+            try {
+                const originalMarks = studentsData.map(s => s.mark);
+                const sortedData = SelectionSort.sortStudentsByMarks(studentsData, 'mark', false);
+                const sortedMarks = sortedData.map(s => s.mark);
+                const stats = SelectionSort.getSortingStats(originalMarks, sortedMarks);
+                
+                displayData(sortedData);
+                displayStatistics(stats);
+                updateStatus(`✅ Sorted ${sortedData.length} students in descending order`, 'success');
+            } catch (error) {
+                updateStatus(`❌ Error: ${error.message}`, 'error');
+                console.error('Sorting error:', error);
+            }
+        }
+        
+        // Display data in table
+        function displayData(data) {
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = '';
+            
+            data.forEach(student => {
+                const grade = calculateGrade(student.mark);
+                const gradeColor = getGradeColor(grade);
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${student.index}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${student.name}</td>
+                    <td class="px-6 py-4 text-sm font-bold text-gray-900">${student.mark}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${gradeColor}">
+                            ${grade}
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Display statistics
+        function displayStatistics(stats) {
+            document.getElementById('statSize').textContent = stats.arraySize;
+            document.getElementById('statComparisons').textContent = stats.comparisons;
+            document.getElementById('statSwaps').textContent = stats.swaps;
+            document.getElementById('statAlgorithm').textContent = stats.algorithm;
+            document.getElementById('statistics').classList.remove('hidden');
+        }
+        
+        // Hide statistics
+        function hideStatistics() {
+            document.getElementById('statistics').classList.add('hidden');
+        }
+        
+        // Update status message
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            let colorClass;
+            
+            if (type === 'success') {
+                colorClass = 'text-green-600';
+            } else if (type === 'error') {
+                colorClass = 'text-red-600';
+            } else {
+                colorClass = 'text-blue-600';
+            }
+            
+            status.innerHTML = `<span class="${colorClass}">${message}</span>`;
+        }
+        
+        // Calculate grade
+        function calculateGrade(mark) {
+            if (mark >= 90) return 'A+';
+            if (mark >= 85) return 'A';
+            if (mark >= 80) return 'A-';
+            if (mark >= 75) return 'B+';
+            if (mark >= 70) return 'B';
+            if (mark >= 65) return 'B-';
+            if (mark >= 60) return 'C+';
+            if (mark >= 55) return 'C';
+            if (mark >= 50) return 'C-';
+            return 'F';
+        }
+        
+        // Get grade color
+        function getGradeColor(grade) {
+            if (grade.startsWith('A')) return 'bg-green-100 text-green-800';
+            if (grade.startsWith('B')) return 'bg-blue-100 text-blue-800';
+            if (grade.startsWith('C')) return 'bg-yellow-100 text-yellow-800';
+            return 'bg-red-100 text-red-800';
+        }
+    </script>
+</body>
+</html>

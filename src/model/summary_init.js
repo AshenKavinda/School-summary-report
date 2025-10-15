@@ -635,35 +635,70 @@ class SummaryInitModel {
                 };
             }
 
-            // Start transaction
-            // BEGIN TRANSACTION
+            const db = await this.getDb();
+            
+            if (!db) {
+                return {
+                    success: false,
+                    error: 'Database connection not available'
+                };
+            }
+
+            // Check if summary exists
+            const existingSummary = await db.collection('summaries').findOne({ id: summaryId });
+            
+            if (!existingSummary) {
+                return {
+                    success: false,
+                    error: 'Summary not found'
+                };
+            }
 
             try {
-                // Delete marks first (foreign key constraint)
-                // DELETE FROM marks WHERE summary_id = ?
+                // Start by deleting all marks associated with this summary
+                console.log(`Deleting marks for summary ID: ${summaryId}`);
+                const marksDeleteResult = await db.collection('marks').deleteMany({ 
+                    summary_id: summaryId 
+                });
+                
+                console.log(`Deleted ${marksDeleteResult.deletedCount} marks records`);
 
-                // Delete summary
-                // DELETE FROM summaries WHERE id = ?
+                // Then delete the summary itself
+                console.log(`Deleting summary with ID: ${summaryId}`);
+                const summaryDeleteResult = await db.collection('summaries').deleteOne({ 
+                    id: summaryId 
+                });
 
-                // Commit transaction
-                // COMMIT
+                if (summaryDeleteResult.deletedCount === 0) {
+                    return {
+                        success: false,
+                        error: 'Failed to delete summary'
+                    };
+                }
+
+                console.log('Summary and all associated data deleted successfully');
 
                 return {
                     success: true,
-                    message: 'Summary deleted successfully'
+                    message: 'Summary and all associated marks deleted successfully',
+                    data: {
+                        summaryId: summaryId,
+                        deletedMarksCount: marksDeleteResult.deletedCount,
+                        summaryName: existingSummary.name,
+                        summaryYear: existingSummary.year
+                    }
                 };
 
-            } catch (transactionError) {
-                // Rollback transaction
-                // ROLLBACK
-                throw transactionError;
+            } catch (deleteError) {
+                console.error('Error during deletion process:', deleteError.message);
+                throw deleteError;
             }
 
         } catch (error) {
             console.error('Error deleting summary:', error.message);
             return {
                 success: false,
-                error: 'Failed to delete summary'
+                error: 'Failed to delete summary: ' + error.message
             };
         }
     }
