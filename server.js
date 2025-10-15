@@ -113,9 +113,6 @@ async function startServer() {
         
         app.listen(PORT, () => {
             console.log(`Server is running on http://localhost:${PORT}`);
-            console.log(`Subject Templates: http://localhost:${PORT}/templates`);
-            console.log(`Summary Manager: http://localhost:${PORT}/summary`);
-            console.log(`Summary Initialization: http://localhost:${PORT}/summary/initialization`);
         });
     } catch (error) {
         console.error('Failed to start server:', error.message);
