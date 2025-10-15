@@ -6,6 +6,7 @@
     <title>Marks Manager - LinkedList Based</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="/src/data_structures/selection_sort.js"></script>
     <style>
         .fade-in {
             animation: fadeIn 0.5s ease-in;
@@ -192,8 +193,36 @@
         <!-- LinkedList Display Table -->
         <div id="marksTableContainer" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
             <div class="px-6 py-4 bg-gray-50 border-b">
-                <h3 class="text-lg font-semibold text-gray-900">Students LinkedList View</h3>
-                <p class="text-sm text-gray-600">Current state of the LinkedList with student marks</p>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Students LinkedList View</h3>
+                        <p class="text-sm text-gray-600">Current state of the LinkedList with student marks</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">Sort:</span>
+                        <button 
+                            onclick="sortLinkedListTable(true)"
+                            class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition duration-200"
+                            title="Sort by Mark - Ascending"
+                        >
+                            <i class="fas fa-sort-amount-down mr-1"></i>Low to High
+                        </button>
+                        <button 
+                            onclick="sortLinkedListTable(false)"
+                            class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-sm font-medium transition duration-200"
+                            title="Sort by Mark - Descending"
+                        >
+                            <i class="fas fa-sort-amount-up mr-1"></i>High to Low
+                        </button>
+                        <button 
+                            onclick="resetLinkedListOrder()"
+                            class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm font-medium transition duration-200"
+                            title="Reset to Original Order"
+                        >
+                            <i class="fas fa-undo mr-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div class="marks-table">
@@ -201,7 +230,16 @@
                     <thead class="sticky-header bg-gray-50 border-b">
                         <tr>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Index</th>
-                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Mark</th>
+                            <th class="px-6 py-3 text-left text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 transition-colors duration-200" 
+                                onclick="toggleMarkSort()" 
+                                onkeypress="if(event.key==='Enter') toggleMarkSort()"
+                                tabindex="0"
+                                title="Click to sort by marks">
+                                Mark
+                                <span class="sort-indicator ml-1 text-gray-400" id="markSortIndicator">
+                                    <i class="fas fa-sort"></i>
+                                </span>
+                            </th>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Grade</th>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Status</th>
                             <th class="px-6 py-3 text-left text-sm font-medium text-gray-900">Action</th>
@@ -515,23 +553,20 @@
                 const row = document.createElement('tr');
                 
                 // Apply different styles based on status
-                let rowClass = 'bg-white';
                 let statusText = 'Pending';
                 let statusClass = 'bg-yellow-100 text-yellow-800';
                 
                 if (student.isCompleted) {
-                    rowClass = 'completed-student';
+                    row.className = 'completed-student';
                     statusText = 'Completed';
                     statusClass = 'bg-green-100 text-green-800';
                 } else if (index === currentStudentIndex) {
-                    rowClass = 'current-student';
+                    row.className = 'current-student';
                     statusText = 'Current';
                     statusClass = 'bg-blue-100 text-blue-800';
                 } else {
-                    rowClass = 'pending-student';
+                    row.className = 'pending-student';
                 }
-                
-                row.className = rowClass;
                 
                 const grade = student.mark > 0 ? calculateGrade(student.mark) : '-';
                 const gradeClass = student.mark > 0 ? getGradeColor(grade) : 'bg-gray-100 text-gray-500';
@@ -565,6 +600,214 @@
             
             // Show table if it has content
             document.getElementById('marksTableContainer').classList.remove('hidden');
+        }
+
+        // LinkedList Table Sorting Functions using Selection Sort
+
+        let originalLinkedListOrder = null;
+        let currentSortState = { ascending: true, column: null };
+
+        /**
+         * Sort the LinkedList table by marks using Selection Sort algorithm
+         */
+        function sortLinkedListTable(ascending = true) {
+            if (studentsLinkedList.getSize() === 0) {
+                showNotification('No data to sort', 'error');
+                return;
+            }
+
+            // Check if SelectionSort is available
+            if (typeof SelectionSort === 'undefined') {
+                showNotification('Selection Sort algorithm not loaded. Please refresh the page.', 'error');
+                console.error('SelectionSort class is not defined. Make sure the script is loaded correctly.');
+                return;
+            }
+
+            try {
+                // Store original order if not already stored
+                if (!originalLinkedListOrder) {
+                    originalLinkedListOrder = studentsLinkedList.toArray().map(student => ({...student}));
+                }
+
+                // Show sorting notification
+                const direction = ascending ? 'ascending' : 'descending';
+                showNotification(`Sorting marks in ${direction} order using Selection Sort...`, 'info');
+
+                // Get students array from LinkedList
+                const studentsArray = studentsLinkedList.toArray();
+                
+                // Create objects for sorting with proper mark handling
+                const studentsToSort = studentsArray.map((student, index) => {
+                    let sortMark;
+                    
+                    // Handle different mark states properly
+                    if (student.mark && student.mark > 0) {
+                        sortMark = student.mark;
+                    } else {
+                        // Put students with no marks at the end regardless of sort direction
+                        sortMark = ascending ? 999999 : -999999;
+                    }
+                    
+                    return {
+                        ...student,
+                        sortMark: sortMark
+                    };
+                });
+
+                // Record original for statistics
+                const originalMarks = studentsToSort.map(s => s.sortMark);
+                
+                // Use Selection Sort to sort the students
+                const sortedStudents = SelectionSort.sortStudentsByMarks(studentsToSort, 'sortMark', ascending);
+                
+                // Get sorting statistics
+                const sortedMarks = sortedStudents.map(s => s.sortMark);
+                const stats = SelectionSort.getSortingStats(originalMarks, sortedMarks);
+                
+                // Update the LinkedList with sorted data
+                studentsLinkedList = new DLinkedList();
+                sortedStudents.forEach(student => {
+                    // Remove the temporary sortMark property
+                    const { sortMark, ...originalStudent } = student;
+                    studentsLinkedList.add(originalStudent);
+                });
+                
+                // Update current student index to maintain consistency
+                updateCurrentStudentIndexAfterSort(sortedStudents);
+                
+                // Update the display
+                updateLinkedListTable();
+                updateSortIndicator(ascending);
+                
+                // Update sort state
+                currentSortState = { ascending, column: 'mark' };
+                
+                // Show completion notification with stats
+                showNotification(
+                    `Sorted ${sortedStudents.length} students by marks (${stats.comparisons} comparisons, ${stats.swaps} swaps)`, 
+                    'success'
+                );
+                
+            } catch (error) {
+                console.error('Error sorting LinkedList table:', error);
+                showNotification('Error occurred while sorting: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Update current student index after sorting to maintain editing context
+         */
+        function updateCurrentStudentIndexAfterSort(sortedStudents) {
+            if (currentStudentIndex >= 0 && currentStudentIndex < sortedStudents.length) {
+                const currentStudent = studentsLinkedList.get(currentStudentIndex);
+                if (currentStudent) {
+                    // Find the new position of the current student
+                    const newIndex = sortedStudents.findIndex(student => 
+                        student.index === currentStudent.index
+                    );
+                    if (newIndex !== -1) {
+                        currentStudentIndex = newIndex;
+                    }
+                }
+            }
+        }
+
+        /**
+         * Reset LinkedList table to original order
+         */
+        function resetLinkedListOrder() {
+            if (!originalLinkedListOrder) {
+                showNotification('No original order to restore', 'error');
+                return;
+            }
+
+            try {
+                // Restore original LinkedList order
+                studentsLinkedList = new DLinkedList();
+                originalLinkedListOrder.forEach(student => {
+                    studentsLinkedList.add({...student});
+                });
+
+                // Find the correct current student index after reset
+                currentStudentIndex = 0;
+                for (let i = 0; i < studentsLinkedList.getSize(); i++) {
+                    const student = studentsLinkedList.get(i);
+                    if (!student.isCompleted) {
+                        currentStudentIndex = i;
+                        break;
+                    }
+                }
+
+                // Update displays
+                updateLinkedListTable();
+                updateCurrentStudentDisplay();
+                resetSortIndicator();
+                
+                // Reset sort state
+                currentSortState = { ascending: true, column: null };
+                
+                showNotification('LinkedList order reset to original', 'success');
+                
+            } catch (error) {
+                console.error('Error resetting LinkedList order:', error);
+                showNotification('Error occurred while resetting: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Update sort indicator in table header
+         */
+        function updateSortIndicator(ascending) {
+            const indicator = document.getElementById('markSortIndicator');
+            if (indicator) {
+                const iconClass = ascending ? 'fa-sort-up' : 'fa-sort-down';
+                const colorClass = ascending ? 'text-green-600' : 'text-orange-600';
+                indicator.innerHTML = `<i class="fas ${iconClass} ${colorClass}"></i>`;
+            }
+        }
+
+        /**
+         * Reset sort indicator
+         */
+        function resetSortIndicator() {
+            const indicator = document.getElementById('markSortIndicator');
+            if (indicator) {
+                indicator.innerHTML = '<i class="fas fa-sort"></i>';
+            }
+        }
+
+        /**
+         * Toggle sort direction when clicking on mark header
+         */
+        function toggleMarkSort() {
+            if (studentsLinkedList.getSize() === 0) {
+                showNotification('No data to sort', 'error');
+                return;
+            }
+
+            const indicator = document.getElementById('markSortIndicator');
+            if (!indicator) return;
+
+            const currentIcon = indicator.querySelector('i');
+            let ascending;
+
+            if (currentIcon.classList.contains('fa-sort')) {
+                // Currently unsorted, sort ascending
+                ascending = true;
+            } else if (currentIcon.classList.contains('fa-sort-up')) {
+                // Currently sorted ascending, switch to descending
+                ascending = false;
+            } else if (currentIcon.classList.contains('fa-sort-down')) {
+                // Currently sorted descending, reset to original order
+                resetLinkedListOrder();
+                return;
+            } else {
+                // Default case
+                ascending = true;
+            }
+
+            // Perform the sort
+            sortLinkedListTable(ascending);
         }
 
         // Edit specific student
@@ -712,6 +955,14 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
+            // Verify SelectionSort is loaded
+            if (typeof SelectionSort !== 'undefined') {
+                console.log('✅ SelectionSort class loaded successfully');
+            } else {
+                console.error('❌ SelectionSort class not found');
+                showNotification('Sorting functionality unavailable - please refresh the page', 'error');
+            }
+            
             parseUrlParameters();
             loadStudentsData();
         });
