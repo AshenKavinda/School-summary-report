@@ -86,8 +86,16 @@
             <div class="flex justify-between items-center py-6">
                 <div class="flex items-center space-x-4">
                     <button 
+                        onclick="goHome()"
+                        class="text-blue-600 hover:text-blue-900 transition-colors duration-200"
+                        title="Go to Homepage"
+                    >
+                        <i class="fas fa-home text-xl"></i>
+                    </button>
+                    <button 
                         onclick="goBack()"
                         class="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+                        title="Go Back"
                     >
                         <i class="fas fa-arrow-left text-xl"></i>
                     </button>
@@ -464,6 +472,11 @@
         // Go back to previous page
         function goBack() {
             window.history.back();
+        }
+
+        // Redirect to homepage
+        function goHome() {
+            window.location.href = '/';
         }
 
         // State management functions
